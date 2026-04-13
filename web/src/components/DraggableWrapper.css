@@ -1,0 +1,144 @@
+.draggable-wrapper {
+  transition: none;
+}
+
+.draggable-wrapper.edit-mode {
+  outline: 2px dashed rgba(59, 130, 246, 0.5);
+  outline-offset: 4px;
+  background: rgba(59, 130, 246, 0.05);
+  border-radius: 8px;
+  padding: 4px;
+}
+
+.draggable-wrapper.dragging {
+  outline-color: rgba(59, 130, 246, 1);
+  background: rgba(59, 130, 246, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.draggable-label {
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(59, 130, 246, 0.95);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.draggable-label i {
+  font-size: 10px;
+}
+
+.draggable-content.with-border {
+  position: relative;
+}
+
+.draggable-wrapper.edit-mode:hover {
+  outline-color: rgba(59, 130, 246, 0.8);
+  background: rgba(59, 130, 246, 0.08);
+}
+
+/* Prevent text selection while dragging */
+.draggable-wrapper.dragging * {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+}
+
+/* Resize Handles */
+.resize-handle {
+  position: absolute;
+  background: rgba(59, 130, 246, 0.8);
+  border: 2px solid white;
+  z-index: 10;
+}
+
+.resize-handle:hover {
+  background: rgba(59, 130, 246, 1);
+}
+
+/* Corner handles */
+.resize-nw, .resize-ne, .resize-sw, .resize-se {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+}
+
+.resize-nw {
+  top: -6px;
+  left: -6px;
+  cursor: nw-resize;
+}
+
+.resize-ne {
+  top: -6px;
+  right: -6px;
+  cursor: ne-resize;
+}
+
+.resize-sw {
+  bottom: -6px;
+  left: -6px;
+  cursor: sw-resize;
+}
+
+.resize-se {
+  bottom: -6px;
+  right: -6px;
+  cursor: se-resize;
+}
+
+/* Side handles */
+.resize-n, .resize-s {
+  width: 40px;
+  height: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-radius: 3px;
+}
+
+.resize-e, .resize-w {
+  width: 6px;
+  height: 40px;
+  top: 50%;
+  transform: translateY(-50%);
+  border-radius: 3px;
+}
+
+.resize-n {
+  top: -3px;
+  cursor: n-resize;
+}
+
+.resize-s {
+  bottom: -3px;
+  cursor: s-resize;
+}
+
+.resize-e {
+  right: -3px;
+  cursor: e-resize;
+}
+
+.resize-w {
+  left: -3px;
+  cursor: w-resize;
+}
+
+.draggable-wrapper.resizing {
+  outline-color: rgba(34, 197, 94, 1);
+  background: rgba(34, 197, 94, 0.1);
+}

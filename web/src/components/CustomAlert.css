@@ -1,0 +1,121 @@
+.custom-alert-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10000;
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.custom-alert-box {
+  background: #1a1a1a;
+  border: 2px solid rgba(100, 150, 200, 0.3);
+  border-radius: 12px;
+  padding: 0;
+  min-width: 400px;
+  max-width: 500px;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: slideIn 0.3s ease-out;
+  overflow: hidden;
+}
+
+@keyframes slideIn {
+  from {
+    transform: translateY(-20px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.custom-alert-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 32px;
+  font-weight: bold;
+  color: #ffffff;
+  margin: 30px auto 20px;
+}
+
+.custom-alert-content {
+  padding: 0 30px 20px;
+  text-align: center;
+}
+
+.custom-alert-title {
+  font-size: 20px;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0 0 12px 0;
+}
+
+.custom-alert-message {
+  font-size: 14px;
+  color: #cccccc;
+  line-height: 1.6;
+  margin: 0;
+}
+
+.custom-alert-actions {
+  display: flex;
+  gap: 12px;
+  padding: 20px 30px 30px;
+  justify-content: center;
+}
+
+.custom-alert-btn {
+  padding: 10px 24px;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 100px;
+}
+
+.custom-alert-btn-ok,
+.custom-alert-btn-confirm {
+  background: #6496c8;
+  color: #ffffff;
+}
+
+.custom-alert-btn-ok:hover,
+.custom-alert-btn-confirm:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(100, 150, 200, 0.4);
+}
+
+.custom-alert-btn-cancel {
+  background: #333333;
+  color: #ffffff;
+}
+
+.custom-alert-btn-cancel:hover {
+  background: #444444;
+  transform: translateY(-2px);
+}
+
+.custom-alert-btn:active {
+  transform: translateY(0);
+}

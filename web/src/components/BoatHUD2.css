@@ -1,0 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+
+.boathud2-container {
+  position: fixed;
+  bottom: 80px;
+  right: 40px;
+  display: flex;
+  align-items: center;
+  gap: 25px;
+  z-index: 1000;
+}
+
+/* Left - Progress Bars */
+.boathud2-left {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.boathud2-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.boathud2-icon {
+  font-size: 24px;
+  width: 30px;
+}
+
+.boathud2-progress-bar {
+  width: 200px;
+  height: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  overflow: hidden;
+}
+
+.boathud2-progress-fill {
+  height: 100%;
+  transition: width 0.3s ease;
+  border-radius: 5px;
+}
+
+.boathud2-progress-fill.fuel {
+  background: linear-gradient(90deg, #ffa500 0%, #ff8c00 100%);
+}
+
+.boathud2-progress-fill.engine {
+  background: linear-gradient(90deg, #ffffff 0%, #cccccc 100%);
+}
+
+/* Right - Speed Card */
+.boathud2-speed-card {
+  background: rgba(0, 0, 0, 0.9);
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 15px;
+  padding: 15px 30px;
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  width: 280px;
+  justify-content: space-between;
+}
+
+.boathud2-gear {
+  font-family: 'Orbitron', monospace;
+  font-size: 28px;
+  font-weight: 900;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 8px 15px;
+  border-radius: 8px;
+}
+
+.boathud2-speed {
+  font-family: 'Orbitron', monospace;
+  font-size: 48px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 1;
+  min-width: 80px;
+  text-align: center;
+}
+
+.boathud2-unit {
+  font-family: 'Orbitron', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 2px;
+}
+
+/* Bottom Status Bar */
+.boathud2-status-bar {
+  position: absolute;
+  bottom: -55px;
+  left: 0;
+  right: 0;
+  display: flex;
+  gap: 25px;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 10px 25px;
+  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+}
+
+.boathud2-status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.boathud2-status-indicator {
+  width: 35px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.boathud2-status-indicator.active {
+  background: #00ff00;
+}
+
+.boathud2-status-item span {
+  font-family: 'Orbitron', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}

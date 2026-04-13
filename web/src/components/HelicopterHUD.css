@@ -1,0 +1,185 @@
+/* Helicopter HUD - Compact Black & White Design */
+.helicopterhud-modern-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-family: 'Rajdhani', 'Roboto Condensed', sans-serif;
+  pointer-events: none;
+  user-select: none;
+}
+
+.helicopterhud-modern-row {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* Compact Card Design */
+.helicopterhud-modern-card {
+  background: rgba(15, 15, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 6px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 130px;
+}
+
+.helicopterhud-card-large {
+  min-width: 160px;
+}
+
+.helicopterhud-card-header {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 9px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.helicopterhud-card-header i {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.helicopterhud-card-value {
+  font-size: 28px;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 2px;
+  line-height: 1;
+}
+
+.helicopterhud-card-value-group {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.helicopterhud-card-unit {
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.6);
+  letter-spacing: 1px;
+  font-weight: 600;
+}
+
+.helicopterhud-card-compass {
+  font-size: 13px;
+  color: #ffffff;
+  font-weight: 700;
+  letter-spacing: 1px;
+  padding: 2px 5px;
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 3px;
+}
+
+/* Status Bar */
+.helicopterhud-modern-status-bar {
+  display: flex;
+  gap: 6px;
+  justify-content: flex-end;
+  margin-top: 2px;
+}
+
+.helicopterhud-modern-status {
+  background: rgba(15, 15, 20, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  padding: 6px 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  min-width: 55px;
+}
+
+.helicopterhud-modern-status i {
+  font-size: 16px;
+  transition: color 0.3s ease;
+}
+
+.helicopterhud-modern-status i.status-on {
+  color: #ffffff;
+}
+
+.helicopterhud-modern-status i.status-off {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.helicopterhud-modern-status i.status-warning {
+  color: #ff4444;
+  animation: blink 1s ease-in-out infinite;
+}
+
+.helicopterhud-modern-status span {
+  font-size: 8px;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 1px;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+/* Rotor spinning animation */
+.rotor-spin {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+/* Responsive */
+@media (max-width: 1280px) {
+  .helicopterhud-modern-container {
+    bottom: 15px;
+    right: 15px;
+    gap: 6px;
+  }
+
+  .helicopterhud-modern-card {
+    padding: 5px 10px;
+    min-width: 115px;
+  }
+
+  .helicopterhud-card-large {
+    min-width: 140px;
+  }
+
+  .helicopterhud-card-value {
+    font-size: 24px;
+  }
+
+  .helicopterhud-modern-status-bar {
+    gap: 5px;
+  }
+
+  .helicopterhud-modern-status {
+    padding: 5px 8px;
+    min-width: 50px;
+  }
+
+  .helicopterhud-modern-status i {
+    font-size: 14px;
+  }
+}

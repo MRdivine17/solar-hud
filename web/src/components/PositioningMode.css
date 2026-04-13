@@ -1,0 +1,301 @@
+/* Positioning Mode Overlay */
+.positioning-mode-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(0, 0, 20, 0.3);
+  backdrop-filter: blur(2px);
+}
+
+/* Grid Background */
+.positioning-grid {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Safezone Border */
+.safezone-border {
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* Anchor Zones (corners) */
+.anchor-zone {
+  position: absolute;
+  width: 100px;
+  height: 100px;
+  border: 2px dashed rgba(100, 150, 200, 0.3);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.anchor-top-left {
+  top: 0;
+  left: 0;
+  border-right: none;
+  border-bottom: none;
+}
+
+.anchor-top-right {
+  top: 0;
+  right: 0;
+  border-left: none;
+  border-bottom: none;
+}
+
+.anchor-bottom-left {
+  bottom: 0;
+  left: 0;
+  border-right: none;
+  border-top: none;
+}
+
+.anchor-bottom-right {
+  bottom: 0;
+  right: 0;
+  border-left: none;
+  border-top: none;
+}
+
+/* Control Panel - Centered */
+.edit-mode-panel {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(30, 40, 60, 0.95);
+  border: 2px solid rgba(100, 150, 200, 0.4);
+  border-radius: 12px;
+  padding: 24px;
+  min-width: 400px;
+  max-width: 500px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  z-index: 10000;
+  backdrop-filter: blur(10px);
+}
+
+.edit-mode-header h3 {
+  margin: 0 0 12px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.edit-mode-header p {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: rgba(255, 255, 255, 0.7);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+/* Options */
+.edit-mode-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin: 20px 0;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.edit-option {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 14px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: color 0.2s;
+}
+
+.edit-option:hover {
+  color: #ffffff;
+}
+
+.edit-option input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #3b82f6;
+}
+
+/* Action Buttons */
+.edit-mode-actions {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.edit-btn {
+  flex: 1;
+  padding: 10px 16px;
+  background: rgba(100, 150, 200, 0.2);
+  border: 1px solid rgba(100, 150, 200, 0.3);
+  border-radius: 6px;
+  color: #6496c8;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.edit-btn:hover {
+  background: rgba(100, 150, 200, 0.3);
+  border-color: rgba(100, 150, 200, 0.5);
+}
+
+.edit-btn i {
+  font-size: 14px;
+}
+
+/* Finish Buttons */
+.edit-mode-finish {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.edit-btn-finish {
+  width: 100%;
+  padding: 14px 20px;
+  background: #3b82f6;
+  border: none;
+  border-radius: 8px;
+  color: #ffffff;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.edit-btn-finish:hover {
+  background: #2563eb;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.edit-btn-discard {
+  width: 100%;
+  padding: 10px 20px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.edit-btn-discard:hover {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #ef4444;
+}
+
+/* Positioning Elements */
+.positioning-element {
+  transition: opacity 0.2s, box-shadow 0.2s;
+  user-select: none;
+}
+
+.positioning-element.dragging {
+  box-shadow: 0 8px 32px rgba(100, 150, 200, 0.4);
+  z-index: 1001 !important;
+}
+
+.positioning-element.hidden {
+  opacity: 0.3;
+}
+
+/* Element Controls */
+.element-controls {
+  position: absolute;
+  top: -32px;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 6px 10px;
+  background: rgba(30, 40, 60, 0.95);
+  border: 1px solid rgba(100, 150, 200, 0.4);
+  border-radius: 6px 6px 0 0;
+  backdrop-filter: blur(10px);
+}
+
+.element-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.element-toggle-btn {
+  padding: 4px 8px;
+  background: rgba(100, 150, 200, 0.2);
+  border: 1px solid rgba(100, 150, 200, 0.3);
+  border-radius: 4px;
+  color: #6496c8;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.element-toggle-btn:hover {
+  background: rgba(100, 150, 200, 0.3);
+  border-color: rgba(100, 150, 200, 0.5);
+}
+
+.element-toggle-btn i {
+  font-size: 14px;
+}
+
+/* Element Size Display */
+.element-size {
+  position: absolute;
+  bottom: -28px;
+  right: 0;
+  padding: 4px 10px;
+  background: rgba(30, 40, 60, 0.95);
+  border: 1px solid rgba(100, 150, 200, 0.4);
+  border-radius: 0 0 6px 6px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #6496c8;
+  font-family: 'Courier New', monospace;
+  backdrop-filter: blur(10px);
+}
+
+/* Element Content */
+.element-content {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .edit-mode-panel {
+    min-width: 90%;
+    max-width: 90%;
+  }
+}

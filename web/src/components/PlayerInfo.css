@@ -1,0 +1,448 @@
+/* Player Info Container - Miniature Compact Cards */
+.player-info-container {
+  position: fixed;
+  top: 12px;
+  right: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  z-index: 100;
+  pointer-events: none;
+  align-items: flex-end;
+}
+
+/* Voice Circle - FULLY RESPONSIVE */
+.voice-circle {
+  width: clamp(32px, 1.88vw, 40px);
+  height: clamp(32px, 1.88vw, 40px);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: clamp(14px, 0.83vw, 18px);
+  align-self: flex-end;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.1); }
+}
+
+/* Miniature Card - Single pill-shaped card with icon + text - FULLY RESPONSIVE */
+.mini-card {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 0.42vw, 10px);
+  padding: clamp(5px, 0.31vw, 8px) clamp(10px, 0.625vw, 14px) clamp(5px, 0.31vw, 8px) clamp(6px, 0.42vw, 10px);
+  border-radius: clamp(16px, 1.04vw, 22px);
+  min-height: clamp(28px, 1.67vw, 36px);
+  min-width: clamp(70px, 4.17vw, 90px);
+  width: fit-content;
+}
+
+/* Card Icon - Small inline icon - FULLY RESPONSIVE */
+.mini-card-icon {
+  font-size: clamp(14px, 0.83vw, 18px);
+  flex-shrink: 0;
+}
+
+/* Card Content - Text inline with icon */
+.mini-card-content {
+  display: flex;
+  align-items: center;
+  gap: clamp(5px, 0.31vw, 8px);
+  white-space: nowrap;
+}
+
+/* Card Value - Main text - FULLY RESPONSIVE */
+.mini-card-value {
+  font-size: clamp(11px, 0.68vw, 14px);
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Card Label - Small subtitle (optional) - FULLY RESPONSIVE */
+.mini-card-label {
+  font-size: clamp(8px, 0.47vw, 10px);
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  opacity: 0.6;
+  line-height: 1;
+}
+
+/* Performance */
+.player-info-container * {
+  will-change: auto;
+}
+
+.voice-circle {
+  will-change: transform;
+}
+
+/* Header Bar Layout */
+.player-info-header {
+  position: fixed;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+  pointer-events: none;
+  width: 90%;
+  max-width: 1200px;
+}
+
+.header-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 8px 20px;
+  border-radius: 12px;
+  min-height: 48px;
+}
+
+.server-logo {
+  height: 32px;
+  width: auto;
+}
+
+.server-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.server-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.header-divider {
+  width: 1px;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.weather-icon {
+  font-size: 20px;
+  color: #fbbf24;
+}
+
+.header-time {
+  margin-left: auto;
+  font-size: 14px;
+  font-weight: 700;
+  color: #fff;
+}
+
+/* Info Grid */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.grid-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-radius: 12px;
+  min-height: 44px;
+}
+
+.grid-card svg {
+  font-size: 18px;
+}
+
+.grid-card span {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+/* Grid Layout - Top Right Aligned */
+.player-info-grid-layout {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 100;
+  pointer-events: none;
+  width: auto;
+  min-width: 400px;
+  max-width: 600px;
+  align-items: flex-end;
+}
+
+/* Grid Header Bar - Larger for logo, server name, weather + time */
+.grid-header-bar {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  padding: 8px 16px;
+  border-radius: 8px;
+  min-height: 48px;
+  width: 100%;
+}
+
+.grid-header-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 12px;
+}
+
+.grid-header-section:not(:last-child) {
+  border-right: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.grid-header-center {
+  flex: 1;
+  justify-content: center;
+}
+
+.grid-header-right {
+  justify-content: flex-end;
+}
+
+.grid-server-logo {
+  height: 32px;
+  width: auto;
+  max-width: 80px;
+  object-fit: contain;
+}
+
+.grid-server-logo-placeholder {
+  height: 32px;
+  width: 60px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.grid-server-name {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.grid-weather-icon {
+  font-size: 20px;
+}
+
+.grid-weather-icon-img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+.grid-datetime {
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* Grid Cards Container - 2 columns × 3 rows - FULLY RESPONSIVE */
+.grid-cards-container {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(clamp(130px, 7.81vw, 170px), 1fr));
+  gap: clamp(6px, 0.42vw, 10px);
+  width: 100%;
+}
+
+/* Grid Info Card - Expands with content - FULLY RESPONSIVE */
+.grid-info-card {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 0.52vw, 12px);
+  padding: clamp(6px, 0.42vw, 10px) clamp(12px, 0.83vw, 18px);
+  border-radius: clamp(6px, 0.42vw, 10px);
+  min-height: clamp(36px, 2.08vw, 44px);
+  position: relative;
+}
+
+/* Colored accent bar on left */
+.grid-card-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: clamp(3px, 0.21vw, 5px);
+}
+
+.grid-info-card svg {
+  font-size: clamp(16px, 0.94vw, 20px);
+  margin-left: clamp(3px, 0.21vw, 5px);
+  flex-shrink: 0;
+}
+
+.grid-info-card span {
+  font-size: clamp(11px, 0.68vw, 14px);
+  font-weight: 700;
+  text-transform: uppercase;
+  white-space: nowrap;
+  flex: 1;
+}
+
+.grid-empty {
+  opacity: 0.3;
+}
+
+/* Positioning Dummy Styles */
+.positioning-dummy {
+  box-shadow: 0 0 20px rgba(251, 146, 60, 0.5) !important;
+  transition: none !important;
+}
+
+.positioning-dummy::before {
+  content: '🎯 DRAG TO POSITION';
+  position: absolute;
+  top: -30px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #fb923c;
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 4px;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  z-index: 10000;
+}
+
+/* MOV HUD Layout - Separated Icon Squares and Info Rectangles - Each component independent */
+.player-info-mov-layout {
+  position: fixed;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  z-index: 100;
+  pointer-events: none;
+  align-items: flex-end;
+}
+
+/* MOV Header Row - Location, Direction, Time, Clock - Independent components */
+.mov-header-row {
+  display: flex;
+  gap: 5px;
+  width: fit-content;
+  justify-content: flex-end;
+  align-self: flex-end;
+}
+
+.mov-header-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 4px;
+  min-height: 55px;
+  min-width: 120px;
+}
+
+.mov-header-card.mov-header-small {
+  min-width: 50px;
+  max-width: 50px;
+  align-items: center;
+}
+
+.mov-header-text {
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mov-header-subtext {
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1.2;
+  margin-top: 3px;
+  opacity: 0.7;
+}
+
+/* MOV Cards Container - Each card is independent */
+.mov-cards-container {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  align-items: flex-end;
+}
+
+/* MOV Card Row - Info Rectangle + Icon Square - Each row is independent */
+.mov-card-row {
+  display: flex;
+  gap: 5px;
+  align-items: stretch;
+  width: fit-content;
+}
+
+/* MOV Info Rectangle - Consistent width for alignment - FULLY RESPONSIVE */
+.mov-info-rect {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(5px, 0.31vw, 8px) clamp(10px, 0.625vw, 14px);
+  border-radius: clamp(3px, 0.21vw, 5px);
+  min-height: clamp(52px, 3.13vw, 64px);
+  min-width: clamp(130px, 7.81vw, 160px);
+  max-width: clamp(250px, 15.63vw, 320px);
+  width: auto;
+  flex: 1;
+}
+
+.mov-info-value {
+  font-size: clamp(12px, 0.73vw, 15px);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+}
+
+.mov-info-label {
+  font-size: clamp(8px, 0.47vw, 10px);
+  font-weight: 600;
+  line-height: 1.2;
+  margin-top: clamp(2px, 0.16vw, 4px);
+  opacity: 0.7;
+  text-transform: capitalize;
+}
+
+/* MOV Icon Square - Same size as info rectangle - FULLY RESPONSIVE */
+.mov-icon-square {
+  width: clamp(52px, 3.07vw, 64px);
+  height: clamp(52px, 3.07vw, 64px);
+  min-width: clamp(52px, 3.07vw, 64px);
+  min-height: clamp(52px, 3.07vw, 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: clamp(3px, 0.21vw, 5px);
+  flex-shrink: 0;
+}
+
+.mov-icon-img {
+  width: clamp(20px, 1.25vw, 26px);
+  height: clamp(20px, 1.25vw, 26px);
+  object-fit: contain;
+}

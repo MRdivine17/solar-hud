@@ -1,0 +1,389 @@
+{
+  "layout": {
+    "healthIcon": {
+      "dimensions": {
+        "height": 56,
+        "width": 56
+      },
+      "offset": {
+        "x": 30,
+        "y": 770,
+        "bottom": 0,
+        "left": 30,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "armorIcon": {
+      "dimensions": {
+        "height": 56,
+        "width": 56
+      },
+      "offset": {
+        "x": 90,
+        "y": 770,
+        "bottom": 0,
+        "left": 90,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "hungerIcon": {
+      "dimensions": {
+        "height": 56,
+        "width": 56
+      },
+      "offset": {
+        "x": 150,
+        "y": 770,
+        "bottom": 0,
+        "left": 150,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "thirstIcon": {
+      "dimensions": {
+        "height": 56,
+        "width": 56
+      },
+      "offset": {
+        "x": 210,
+        "y": 770,
+        "bottom": 0,
+        "left": 210,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "oxygenIcon": {
+      "dimensions": {
+        "height": 56,
+        "width": 56
+      },
+      "offset": {
+        "x": 270,
+        "y": 770,
+        "bottom": 0,
+        "left": 270,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "stressIcon": {
+      "dimensions": {
+        "height": 56,
+        "width": 56
+      },
+      "offset": {
+        "x": 330,
+        "y": 770,
+        "bottom": 0,
+        "left": 330,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "minimap": {
+      "dimensions": {
+        "height": 200,
+        "width": 270
+      },
+      "offset": {
+        "x": 20,
+        "y": 600,
+        "bottom": 68,
+        "left": 0,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "location": {
+      "dimensions": {
+        "height": 60,
+        "width": 270
+      },
+      "offset": {
+        "x": 20,
+        "y": 1080,
+        "bottom": 300,
+        "left": 20,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "weaponDisplay": {
+      "dimensions": {
+        "height": 60,
+        "width": 350
+      },
+      "offset": {
+        "x": 1670,
+        "y": 730,
+        "right": 0,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "vehicleHud": {
+      "dimensions": {
+        "height": 180,
+        "width": 180
+      },
+      "offset": {
+        "x": 1680,
+        "y": 780,
+        "bottom": 60,
+        "right": 0,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    },
+    "playerInfoContainer": {
+      "dimensions": {
+        "height": 240,
+        "width": 250
+      },
+      "offset": {
+        "x": 20,
+        "y": 20,
+        "top": 20,
+        "right": 0,
+        "offsetX": 0,
+        "offsetY": 0
+      }
+    }
+  },
+  "settings": {
+    "style": "progressOutline",
+    "borderRadius": "fullyRounded",
+    "speedUnit": "kmh",
+    "vehicleHudStyle": "default",
+    "boatHudStyle": "boat2",
+    "boatSpeedUnit": "mph",
+    "flightHudStyle": "flight1",
+    "flightSpeedUnit": "knots",
+    "helicopterHudStyle": "heli1",
+    "helicopterSpeedUnit": "mph",
+    "flightHudEnabled": true,
+    "useVehicleHudForBoats": false,
+    "useVehicleHudForAircraft": false,
+    "useVehicleHudForHelicopters": false,
+    "serverLogoScale": 72,
+    "seatbeltSoundsEnabled": true,
+    "health": {
+      "visible": true,
+      "visibleMin": 0,
+      "visibleMax": 100,
+      "bgColor": "#1a1a1a",
+      "progressColor": "#ef4444",
+      "iconColor": "#ffffff",
+      "shadowColor": "#ef4444"
+    },
+    "armor": {
+      "visible": true,
+      "visibleMin": 0,
+      "visibleMax": 100,
+      "bgColor": "#1a1a1a",
+      "progressColor": "#3b82f6",
+      "iconColor": "#ffffff",
+      "shadowColor": "#3b82f6"
+    },
+    "hunger": {
+      "visible": true,
+      "visibleMin": 0,
+      "visibleMax": 100,
+      "bgColor": "#1a1a1a",
+      "progressColor": "#f59e0b",
+      "iconColor": "#ffffff",
+      "shadowColor": "#f59e0b"
+    },
+    "thirst": {
+      "visible": true,
+      "visibleMin": 0,
+      "visibleMax": 100,
+      "bgColor": "#1a1a1a",
+      "progressColor": "#06b6d4",
+      "iconColor": "#ffffff",
+      "shadowColor": "#06b6d4"
+    },
+    "oxygen": {
+      "visible": true,
+      "visibleMin": 0,
+      "visibleMax": 100,
+      "bgColor": "#1a1a1a",
+      "progressColor": "#00bcd4",
+      "iconColor": "#ffffff",
+      "shadowColor": "#00bcd4"
+    },
+    "stress": {
+      "visible": true,
+      "visibleMin": 0,
+      "visibleMax": 100,
+      "bgColor": "#1a1a1a",
+      "progressColor": "#9c27b0",
+      "iconColor": "#ffffff",
+      "shadowColor": "#9c27b0"
+    },
+    "minimap": {
+      "size": "small",
+      "shape": "square",
+      "borderRadius": 12,
+      "position": {
+        "x": 20,
+        "y": 80
+      },
+      "minimapStyle": "rounded",
+      "compassPrimaryColor": "#ffffff",
+      "compassBgColor": "#00000080",
+      "compassShadowColor": "#000000",
+      "compassBorderRadius": "rounded",
+      "showMinimapOnFoot": true,
+      "showNorthBlip": true,
+      "moveCompassWhenHidden": true,
+      "compassFollowsCamera": true,
+      "showNearestPostal": false,
+      "showCompassStreet": true,
+      "showCompassDirection": true
+    },
+    "playerInfo": {
+      "enabled": true,
+      "layoutStyle": "miniature",
+      "cardStyle": "rounded",
+      "themeMode": "dark",
+      "bgColor": "#000000",
+      "iconBgColor": "#1a1a1a",
+      "contentBgColor": "#0a0a0a",
+      "transparency": 85,
+      "position": {
+        "x": 12,
+        "y": 12
+      },
+      "scale": 96,
+      "showId": true,
+      "showTime": true,
+      "showJob": true,
+      "showBank": true,
+      "showCash": true,
+      "showDirty": false,
+      "showVoice": true,
+      "showWeather": false,
+      "showServerInfo": false,
+      "weatherIconType": "fontawesome",
+      "weatherIconPath": "",
+      "showLogo": true,
+      "logoScale": 100,
+      "logoPosition": {
+        "x": 50,
+        "y": 10
+      },
+      "idColors": {
+        "iconColor": "#ffffff",
+        "textColor": "#ffffff",
+        "labelColor": "#999999",
+        "bgColor": "#0a0a0a",
+        "iconBgColor": "#1a1a1a"
+      },
+      "timeColors": {
+        "iconColor": "#ffffff",
+        "textColor": "#ffffff",
+        "labelColor": "#999999",
+        "bgColor": "#0a0a0a",
+        "iconBgColor": "#1a1a1a"
+      },
+      "jobColors": {
+        "iconColor": "#ffffff",
+        "textColor": "#ffffff",
+        "labelColor": "#999999",
+        "bgColor": "#0a0a0a",
+        "iconBgColor": "#1a1a1a"
+      },
+      "bankColors": {
+        "iconColor": "#ffffff",
+        "textColor": "#ffffff",
+        "labelColor": "#999999",
+        "bgColor": "#0a0a0a",
+        "iconBgColor": "#1a1a1a"
+      },
+      "cashColors": {
+        "iconColor": "#ffffff",
+        "textColor": "#ffffff",
+        "labelColor": "#999999",
+        "bgColor": "#0a0a0a",
+        "iconBgColor": "#1a1a1a"
+      },
+      "dirtyColors": {
+        "iconColor": "#ffffff",
+        "textColor": "#ffffff",
+        "labelColor": "#999999",
+        "bgColor": "#0a0a0a",
+        "iconBgColor": "#1a1a1a"
+      },
+      "voiceColors": {
+        "iconColor": "#00ff00",
+        "textColor": "#00ff00",
+        "labelColor": "#999999",
+        "bgColor": "#0a0a0a",
+        "iconBgColor": "#1a1a1a"
+      }
+    },
+    "notification": {
+      "position": "top-right",
+      "style": "style1",
+      "successColor": "#22c55e",
+      "errorColor": "#ef4444",
+      "warningColor": "#f59e0b",
+      "infoColor": "#3b82f6",
+      "bgColor": "#1a1a1a",
+      "textColor": "#ffffff",
+      "timerColor": "#6496c8",
+      "transparency": 90
+    },
+    "progressBar": {
+      "position": "bottom-center",
+      "style": "style1",
+      "defaultColor": "#6496c8",
+      "bgColor": "#1a1a1a",
+      "textColor": "#ffffff",
+      "timerColor": "#ffffff",
+      "percentageColor": "#ffffff",
+      "iconColor": "#ffffff",
+      "transparency": 90
+    },
+    "uiPositions": {},
+    "boatHUD1Colors": {
+      "fuelIconColor": "#ffa500",
+      "fuelArcColor": "#ffa500",
+      "fuelArcBgColor": "rgba(255, 255, 255, 0.15)",
+      "engineIconColor": "#ffffff",
+      "engineArcColor": "#ffffff",
+      "engineArcBgColor": "rgba(255, 255, 255, 0.15)",
+      "speedArcColor": "#ffffff",
+      "speedArcBgColor": "rgba(255, 255, 255, 0.15)",
+      "speedNumberColor": "#ffffff",
+      "speedUnitColor": "rgba(255, 255, 255, 0.7)",
+      "directionBgColor": "rgba(255, 255, 255, 0.15)",
+      "directionTextColor": "#ffffff",
+      "statusBarBgColor": "rgba(0, 0, 0, 0.9)",
+      "statusActiveColor": "#00ff00",
+      "statusInactiveColor": "rgba(255, 255, 255, 0.2)"
+    },
+    "boatHUD2Colors": {
+      "fuelIconColor": "#ffa500",
+      "fuelArcColor": "#ffa500",
+      "fuelArcBgColor": "rgba(255, 255, 255, 0.15)",
+      "engineIconColor": "#ffffff",
+      "engineArcColor": "#ffffff",
+      "engineArcBgColor": "rgba(255, 255, 255, 0.15)",
+      "speedArcColor": "#ffffff",
+      "speedArcBgColor": "rgba(255, 255, 255, 0.15)",
+      "speedNumberColor": "#ffffff",
+      "speedUnitColor": "rgba(255, 255, 255, 0.7)",
+      "directionBgColor": "rgba(255, 255, 255, 0.1)",
+      "directionTextColor": "#ffffff",
+      "statusBarBgColor": "rgba(0, 0, 0, 0.9)",
+      "statusActiveColor": "#00ff00",
+      "statusInactiveColor": "rgba(255, 255, 255, 0.2)"
+    }
+  }
+}

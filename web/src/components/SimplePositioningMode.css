@@ -1,0 +1,128 @@
+.simple-positioning-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 9998;
+  backdrop-filter: blur(4px);
+}
+
+.simple-positioning-grid {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(100, 150, 200, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(100, 150, 200, 0.1) 1px, transparent 1px);
+  background-size: 20px 20px;
+  pointer-events: none;
+}
+
+.simple-positioning-instructions {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(20, 20, 25, 0.95);
+  border: 2px solid rgba(100, 150, 200, 0.5);
+  border-radius: 12px;
+  padding: 20px 30px;
+  text-align: center;
+  z-index: 10001;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+}
+
+.simple-positioning-instructions h3 {
+  margin: 0 0 10px 0;
+  color: #ffffff;
+  font-size: 18px;
+}
+
+.simple-positioning-instructions p {
+  margin: 0 0 15px 0;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+.simple-positioning-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.simple-pos-save,
+.simple-pos-cancel {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.simple-pos-save {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #ffffff;
+}
+
+.simple-pos-save:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.simple-pos-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.simple-pos-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.simple-drag-element {
+  border: 2px dashed rgba(100, 150, 200, 0.8);
+  background: rgba(100, 150, 200, 0.2);
+  border-radius: 8px;
+  padding: 8px;
+  min-width: 60px;
+  min-height: 60px;
+  transition: all 0.2s;
+}
+
+.simple-drag-element.dragging {
+  border-color: rgba(100, 200, 150, 1);
+  background: rgba(100, 200, 150, 0.3);
+  box-shadow: 0 8px 24px rgba(100, 200, 150, 0.4);
+}
+
+.simple-drag-label {
+  font-size: 10px;
+  color: #ffffff;
+  background: rgba(0, 0, 0, 0.8);
+  padding: 2px 6px;
+  border-radius: 4px;
+  margin-bottom: 4px;
+  text-align: center;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
+
+.simple-drag-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  font-size: 24px;
+}
+
+.hud-preview-statusIcon,
+.hud-preview-playerCard,
+.hud-preview-weapon {
+  opacity: 0.8;
+}

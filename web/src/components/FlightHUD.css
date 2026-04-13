@@ -1,0 +1,160 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+
+/* Digital Flight HUD Container */
+.flighthud-digital-container {
+  position: fixed;
+  bottom: 65px; /* Moved down by 15px */
+  right: 10px; /* Moved right by 30px more (30-20=10) */
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 1000;
+  font-family: 'Orbitron', monospace;
+}
+
+/* Digital Row */
+.flighthud-digital-row {
+  display: flex;
+  gap: 15px;
+  align-items: center;
+}
+
+/* Digital Item */
+.flighthud-digital-item {
+  display: grid;
+  grid-template-columns: 60px 1fr;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 5px 10px;
+  border-radius: 4px;
+  width: 200px; /* Reduced width */
+  height: 30px;
+}
+
+.flighthud-digital-item-large {
+  width: 200px;
+}
+
+.flighthud-digital-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.flighthud-digital-value-group {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  justify-content: flex-end;
+  white-space: nowrap;
+}
+
+.flighthud-digital-value {
+  font-size: 18px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 1px;
+  text-shadow: 0 0 6px rgba(255, 255, 255, 0.3);
+  font-variant-numeric: tabular-nums;
+  transition: none;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.flighthud-digital-unit {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.8);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.flighthud-digital-compass {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+/* Status Indicators Bar */
+.flighthud-status-bar {
+  display: flex;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.85);
+  padding: 8px 15px;
+  border-radius: 6px;
+  margin-top: 8px;
+  margin-left: 40px; /* Push to the right */
+  width: fit-content;
+}
+
+.flighthud-status-indicator {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  width: 45px; /* Fixed width */
+}
+
+.flighthud-status-light {
+  width: 35px;
+  height: 6px;
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.flighthud-status-light.green {
+  background: #00ff00;
+  box-shadow: 0 0 8px rgba(0, 255, 0, 0.6);
+}
+
+.flighthud-status-light.red {
+  background: #ff0000;
+  box-shadow: 0 0 8px rgba(255, 0, 0, 0.6);
+}
+
+.flighthud-status-light.off {
+  background: rgba(255, 255, 255, 0.15);
+  box-shadow: none;
+}
+
+.flighthud-status-light.blink {
+  animation: blink-slow 1s ease-in-out infinite;
+}
+
+.flighthud-status-light.blink-fast {
+  animation: blink-fast 0.4s ease-in-out infinite;
+}
+
+.flighthud-status-label {
+  font-size: 8px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+/* Blink Animations */
+@keyframes blink-slow {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.2;
+  }
+}
+
+@keyframes blink-fast {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0;
+  }
+}

@@ -1,0 +1,137 @@
+/* Vehicle Speedometer - Square Design - FULLY RESPONSIVE */
+.vehicle-speedometer {
+  position: fixed;
+  width: clamp(10rem, 13.75vw, 15rem);
+  background: rgba(255, 255, 255, 0.95);
+  clip-path: polygon(
+    12px 0, 
+    calc(100% - 12px) 0, 
+    100% 12px, 
+    100% calc(100% - 12px), 
+    calc(100% - 12px) 100%, 
+    12px 100%, 
+    0 calc(100% - 12px), 
+    0 12px
+  );
+  padding: clamp(0.4rem, 0.625vw, 0.75rem) clamp(0.5rem, 0.875vw, 1rem);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  z-index: 1000;
+  pointer-events: none;
+  transform-origin: bottom right;
+}
+
+/* Fuel Bar - FULLY RESPONSIVE */
+.fuel-bar-container {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 0.42vw, 10px);
+  margin-bottom: clamp(6px, 0.42vw, 10px);
+}
+
+.fuel-icon {
+  font-size: clamp(14px, 0.83vw, 18px);
+  color: #000;
+}
+
+.fuel-bar-bg {
+  flex: 1;
+  height: clamp(10px, 0.625vw, 14px);
+  background: #d1d5db;
+  border-radius: clamp(5px, 0.31vw, 7px);
+  overflow: hidden;
+}
+
+.fuel-bar-fill {
+  height: 100%;
+  background: #000;
+  transition: width 0.3s ease;
+}
+
+/* Warning Icons - FULLY RESPONSIVE */
+.warning-icons {
+  display: flex;
+  justify-content: center;
+  gap: clamp(14px, 1.04vw, 24px);
+  margin-bottom: clamp(10px, 0.73vw, 16px);
+}
+
+.warning-icon {
+  font-size: clamp(20px, 1.25vw, 26px);
+  color: #d1d5db;
+  transition: color 0.3s ease;
+}
+
+.warning-icon.active {
+  color: #000;
+}
+
+.warning-icon.blink {
+  color: #d1d5db;
+  animation: blinkWarning 1s infinite;
+}
+
+@keyframes blinkWarning {
+  0%, 100% { 
+    color: #000;
+    opacity: 1; 
+  }
+  50% { 
+    color: #d1d5db;
+    opacity: 0.4; 
+  }
+}
+
+/* Speed Display - FULLY RESPONSIVE */
+.speed-display {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: clamp(0.5rem, 0.75vw, 0.875rem);
+}
+
+.speed-box {
+  width: clamp(5rem, 6.25vw, 7rem);
+  height: clamp(3.75rem, 5vw, 5.5rem);
+  background: transparent;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: clamp(0.25rem, 0.375vw, 0.5rem);
+  position: relative;
+}
+
+.speed-number {
+  font-size: clamp(2.5rem, 4vw, 4.5rem);
+  font-weight: 900;
+  color: #000;
+  line-height: 1;
+}
+
+.speed-unit-label {
+  font-size: clamp(1.125rem, 1.5vw, 1.75rem);
+  font-weight: 700;
+  color: #000;
+  letter-spacing: clamp(0.06rem, 0.09375vw, 0.12rem);
+}
+
+/* Gear Numbers - FULLY RESPONSIVE */
+.gear-numbers {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: clamp(0.375rem, 0.5vw, 0.625rem) clamp(0.375rem, 0.5vw, 0.625rem) 0 clamp(0.375rem, 0.5vw, 0.625rem);
+  border-top: 2px solid #000;
+  margin-top: clamp(0.375rem, 0.5vw, 0.625rem);
+}
+
+.gear-number {
+  font-size: clamp(1.25rem, 1.875vw, 2.125rem);
+  font-weight: 700;
+  color: #d1d5db;
+  transition: all 0.2s ease;
+}
+
+.gear-number.active {
+  color: #000;
+  transform: scale(1.15);
+}

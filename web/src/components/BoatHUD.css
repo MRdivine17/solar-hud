@@ -1,0 +1,176 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+
+.boathud-container {
+  position: fixed;
+  bottom: 80px;
+  right: 40px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+  z-index: 1000;
+}
+
+/* Main Row - Gauges and Speedometer */
+.boathud-main-row {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+}
+
+/* Left Column - Engine and Fuel stacked */
+.boathud-left-column {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+/* Small Gauges (Fuel & Engine) - Smaller */
+.boathud-small-gauge {
+  position: relative;
+  width: 65px;
+  height: 65px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.boathud-small-svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  top: 0;
+  left: 0;
+}
+
+.boathud-small-icon {
+  font-size: 20px;
+  color: #ffffff;
+  z-index: 2;
+  position: absolute;
+  top: 64%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+/* Large Speedometer - Bigger */
+.boathud-speedometer {
+  position: relative;
+  width: 200px;
+  height: 250px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.boathud-speed-svg {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+}
+
+.boathud-direction {
+  position: absolute;
+  top: 75px;
+  font-family: 'Orbitron', monospace;
+  font-size: 14px;
+  font-weight: 700;
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.15);
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  z-index: 2;
+}
+
+.boathud-speed-number {
+  font-family: 'Orbitron', monospace;
+  font-size: 64px;
+  font-weight: 900;
+  color: #ffffff;
+  line-height: 7;
+  z-index: 2;
+  margin-top: 50px;
+}
+
+.boathud-speed-unit {
+  font-family: 'Orbitron', monospace;
+  font-size: 16px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.7);
+  letter-spacing: 2px;
+  z-index: 2;
+  margin-top: 8px;
+}
+
+/* Bottom Status Bar */
+.boathud-status-bar {
+  display: flex;
+  gap: 25px;
+  background: rgba(0, 0, 0, 0.9);
+  padding: 10px 25px;
+  border-radius: 10px;
+  align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+}
+
+.boathud-status-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+}
+
+.boathud-status-bar-indicator {
+  width: 35px;
+  height: 6px;
+  border-radius: 3px;
+  transition: background 0.3s ease;
+}
+
+.boathud-status-bar-indicator.engine-on {
+  background: #00ff00;
+}
+
+.boathud-status-bar-indicator.engine-off {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.boathud-status-bar-indicator.light-on {
+  background: #00ff00;
+}
+
+.boathud-status-bar-indicator.light-off {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.boathud-status-bar-indicator.anchor-on {
+  background: #00ff00;
+  animation: anchorBlink 1s ease-in-out infinite;
+}
+
+.boathud-status-bar-indicator.anchor-off {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+@keyframes anchorBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.boathud-status-item span {
+  font-family: 'Orbitron', monospace;
+  font-size: 10px;
+  font-weight: 700;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}

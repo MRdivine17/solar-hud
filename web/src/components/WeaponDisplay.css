@@ -1,0 +1,177 @@
+/* ========== MOV HUD LAYOUT - FULLY RESPONSIVE ========== */
+.weapon-display-mov {
+  position: fixed;
+  display: flex;
+  flex-direction: column;
+  gap: clamp(4px, 0.26vw, 6px);
+  z-index: 100;
+  pointer-events: none;
+  align-items: flex-end;
+}
+
+.weapon-card-row {
+  display: flex;
+  gap: clamp(4px, 0.26vw, 6px);
+  align-items: stretch;
+  width: fit-content;
+}
+
+.weapon-info-rect {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: clamp(5px, 0.31vw, 8px) clamp(10px, 0.625vw, 14px);
+  border-radius: clamp(3px, 0.21vw, 5px);
+  min-height: clamp(52px, 3.13vw, 64px);
+  min-width: clamp(130px, 7.81vw, 160px);
+  max-width: clamp(130px, 7.81vw, 160px);
+}
+
+.weapon-ammo-value {
+  font-size: clamp(12px, 0.73vw, 15px);
+  font-weight: 700;
+  line-height: 1.2;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.weapon-name-label {
+  font-size: clamp(8px, 0.47vw, 10px);
+  font-weight: 600;
+  line-height: 1.2;
+  margin-top: clamp(2px, 0.16vw, 4px);
+  opacity: 0.7;
+  text-transform: capitalize;
+}
+
+.weapon-icon-square {
+  width: clamp(52px, 3.07vw, 64px);
+  height: clamp(52px, 3.07vw, 64px);
+  min-width: clamp(52px, 3.07vw, 64px);
+  min-height: clamp(52px, 3.07vw, 64px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: clamp(3px, 0.21vw, 5px);
+  flex-shrink: 0;
+  overflow: hidden;
+  background: #1a1a1a !important;
+}
+
+.weapon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  padding: clamp(3px, 0.21vw, 5px);
+  filter: brightness(1.1);
+}
+
+/* ========== GRID LAYOUT - FULLY RESPONSIVE ========== */
+.weapon-display-grid {
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+  width: clamp(180px, 10.42vw, 220px);
+}
+
+.weapon-grid-card {
+  display: flex;
+  align-items: center;
+  gap: clamp(8px, 0.52vw, 12px);
+  padding: clamp(6px, 0.42vw, 10px) clamp(12px, 0.83vw, 18px);
+  border-radius: clamp(6px, 0.42vw, 10px);
+  min-height: clamp(36px, 2.08vw, 44px);
+  min-width: clamp(180px, 10.42vw, 220px);
+  position: relative;
+  overflow: hidden;
+}
+
+.weapon-grid-accent {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: clamp(3px, 0.21vw, 5px);
+}
+
+.weapon-grid-image {
+  width: clamp(28px, 1.67vw, 36px);
+  height: clamp(28px, 1.67vw, 36px);
+  object-fit: contain;
+  margin-left: clamp(3px, 0.21vw, 5px);
+  flex-shrink: 0;
+  filter: brightness(1.1);
+}
+
+.weapon-grid-info {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1px, 0.1vw, 3px);
+  flex: 1;
+}
+
+.weapon-grid-name {
+  font-size: clamp(9px, 0.52vw, 11px);
+  font-weight: 600;
+  text-transform: uppercase;
+  line-height: 1.2;
+  opacity: 0.7;
+}
+
+.weapon-grid-ammo {
+  font-size: clamp(11px, 0.68vw, 14px);
+  font-weight: 700;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+/* ========== MINIATURE LAYOUT - FULLY RESPONSIVE ========== */
+.weapon-display-miniature {
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.weapon-mini-card {
+  display: flex;
+  align-items: center;
+  gap: clamp(6px, 0.42vw, 10px);
+  padding: clamp(6px, 0.42vw, 10px) clamp(12px, 0.73vw, 16px) clamp(6px, 0.42vw, 10px) clamp(6px, 0.42vw, 10px);
+  border-radius: clamp(20px, 1.25vw, 26px);
+  min-height: clamp(40px, 2.4vw, 50px);
+}
+
+.weapon-mini-image {
+  width: clamp(32px, 1.98vw, 42px);
+  height: clamp(32px, 1.98vw, 42px);
+  object-fit: contain;
+  flex-shrink: 0;
+  padding: clamp(1px, 0.1vw, 3px);
+  filter: brightness(1.1);
+}
+
+.weapon-mini-content {
+  display: flex;
+  align-items: center;
+  gap: clamp(5px, 0.31vw, 8px);
+  white-space: nowrap;
+}
+
+.weapon-mini-ammo {
+  font-size: clamp(11px, 0.68vw, 14px);
+  font-weight: 700;
+  line-height: 1;
+}
+
+/* ========== RELOADING ANIMATION ========== */
+.weapon-ammo-value.reloading,
+.weapon-grid-ammo.reloading,
+.weapon-mini-ammo.reloading {
+  animation: reloadPulse 0.8s infinite;
+}
+
+@keyframes reloadPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}

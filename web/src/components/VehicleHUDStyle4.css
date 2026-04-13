@@ -1,0 +1,294 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
+
+.style4-hud-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  width: 550px;
+  height: auto;
+  z-index: 1000;
+}
+
+.style4-base-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  opacity: 0.95;
+}
+
+/* Left Side - Speedometer Gauge */
+.style4-left-gauge {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.style4-speed-number {
+  position: absolute;
+  font-family: 'Orbitron', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 0 10px currentColor;
+  transform: translate(-50%, -50%);
+  letter-spacing: 1px;
+}
+
+/* Red Zone Pulse Animation - Activates after 140 speed */
+.red-zone-pulse {
+  animation: redZonePulse 0.8s ease-in-out infinite;
+  font-weight: 900;
+  font-size: 18px;
+}
+
+@keyframes redZonePulse {
+  0% {
+    text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+    transform: translate(-50%, -50%) scale(1);
+  }
+  50% {
+    text-shadow: 0 0 20px #ff0000, 0 0 30px #ff0000, 0 0 40px #ff0000;
+    transform: translate(-50%, -50%) scale(1.1);
+  }
+  100% {
+    text-shadow: 0 0 10px #ff0000, 0 0 20px #ff0000;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+/* Speed Needle (Cyan) */
+.style4-speed-needle {
+  position: absolute;
+  left: 15%;
+  top: 50%;
+  width: 2px;
+  height: 80px;
+  background: linear-gradient(180deg, #00d9ff 0%, rgba(0, 217, 255, 0.4) 100%);
+  transform-origin: 50% 100%;
+  transition: transform 0.3s ease-out;
+  box-shadow: 0 0 12px rgba(0, 217, 255, 1);
+  border-radius: 2px 2px 0 0;
+}
+
+.style4-speed-needle::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 12px solid #00d9ff;
+  filter: drop-shadow(0 0 8px rgba(0, 217, 255, 1));
+}
+
+/* Speed Progress Bar (Curved Snake following outline) */
+.style4-speed-progress-svg {
+  position: absolute;
+  left: 10%;
+  top: 16%;
+  width: 22%;
+  height: 68%;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.style4-progress-path {
+  transition: stroke-dashoffset 0.5s ease-out;
+  filter: drop-shadow(0 0 6px rgba(0, 217, 255, 0.9));
+}
+
+/* Realistic Needle Container */
+.style4-needle-container {
+  position: absolute;
+  left: 28%;     /* Moved LEFT (was 30%) */
+  top: 46%;      /* Moved DOWN (was 44%) */
+  width: 20px;
+  height: 20px;
+}
+
+/* Realistic Speed Needle */
+.style4-speed-needle {
+  position: absolute;
+  left: 52%;
+  top: 50%;
+  width: 3px;      /* Slightly thicker (was 2px) */
+  height: 45px;    /* Smaller/shorter (was 60px) */
+  background: linear-gradient(180deg, #ff3333 0%, #cc0000 100%);
+  transform-origin: 50% 0%;
+  transition: none; /* NO SMOOTH TRANSITION - instant snap */
+  z-index: 5;
+  box-shadow: 0 0 6px rgba(255, 51, 51, 0.8);
+}
+
+.style4-needle-tip {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 0.8px solid transparent;    /* Ultra sharp - very narrow */
+  border-right: 0.8px solid transparent;   /* Ultra sharp - very narrow */
+  border-bottom: 15px solid #ff3333;       /* Long pointed tip */
+  filter: drop-shadow(0 0 4px rgba(255, 51, 51, 1));
+}
+
+/* Needle Center (Black Knob) */
+.style4-needle-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle, #444444 0%, #000000 100%);
+  border: 2px solid #666666;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  z-index: 10;
+}
+
+/* ============================================ */
+/* RIGHT SIDE - GEAR INDICATOR */
+/* ============================================ */
+
+.style4-right-gauge {
+  position: absolute;
+  right: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.style4-gear-number {
+  position: absolute;
+  font-family: 'Orbitron', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  color: #ffffff;
+  text-shadow: 0 0 10px currentColor;
+  transform: translate(50%, -50%);
+  letter-spacing: 1px;
+}
+
+/* Gear Needle Container */
+.style4-gear-needle-container {
+  position: absolute;
+  right: 30%;     /* Moved slightly left (was 28%) */
+  top: 44%;       /* Moved slightly up (was 46%) */
+  width: 20px;
+  height: 20px;
+}
+
+/* Blue Gear Needle */
+.style4-gear-needle {
+  position: absolute;
+  left: 52%;
+  top: 50%;
+  width: 3px;
+  height: 45px;
+  background: linear-gradient(180deg, #00d9ff 0%, #0099cc 100%);
+  transform-origin: 50% 0%;
+  transition: transform 0.3s ease-out;  /* Smooth transition */
+  z-index: 5;
+  box-shadow: 0 0 6px rgba(0, 217, 255, 0.8);
+}
+
+/* Blue Gear Needle Sharp Tip */
+.style4-gear-needle-tip {
+  position: absolute;
+  top: -1px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 0.8px solid transparent;
+  border-right: 0.8px solid transparent;
+  border-bottom: 15px solid #00d9ff;
+  filter: drop-shadow(0 0 4px rgba(0, 217, 255, 1));
+}
+
+/* Gear Needle Center (Black Knob) */
+.style4-gear-needle-center {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 14px;
+  height: 14px;
+  background: radial-gradient(circle, #444444 0%, #000000 100%);
+  border: 2px solid #666666;
+  border-radius: 50%;
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.9), inset 0 2px 4px rgba(255, 255, 255, 0.3);
+  z-index: 10;
+}
+
+/* ============================================ */
+/* CENTER - VEHICLE STATUS INDICATORS */
+/* ============================================ */
+
+.style4-center-indicators {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: center;
+  z-index: 15;
+}
+
+/* Minimal Row - Just Icon + Percentage */
+.style4-minimal-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.style4-minimal-row svg {
+  font-size: 20px;
+  text-shadow: 0 0 8px currentColor;
+  width: 20px;
+  height: 20px;
+}
+
+.style4-minimal-row span {
+  font-family: 'Orbitron', monospace;
+  font-size: 16px;
+  font-weight: 700;
+  text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);
+}
+
+/* Warning Blink */
+.style4-warning-blink {
+  animation: warningBlink 1s ease-in-out infinite;
+}
+
+@keyframes warningBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Seatbelt Blink - White when not worn */
+.style4-seatbelt-blink {
+  animation: seatbeltBlink 1s ease-in-out infinite;
+}
+
+@keyframes seatbeltBlink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
