@@ -2,6 +2,8 @@
 
 A modern, fully customizable HUD system for FiveM servers with React UI, multiple framework support, and extensive configuration options.
 
+## PREVIEW
+- **Youtube:** [Solar Hud Preview](https://youtu.be/utYPeT-gzQQ?si=jhJmAEPTSlzNg51T)
 ---
 ## 📞 Support
 
