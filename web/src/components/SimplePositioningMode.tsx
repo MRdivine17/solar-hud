@@ -62,6 +62,13 @@ const SimplePositioningMode = ({
   
   const [positions, setPositions] = useState(defaultPositions)
   const [snapToGrid, setSnapToGrid] = useState(true)
+
+  useEffect(() => {
+    if (isActive) {
+      setPositions(settings.uiPositions || defaultPositions)
+    }
+  }, [isActive])
+
   const [draggingKey, setDraggingKey] = useState<string | null>(null)
   const dragInfoRef = useRef<{ offsetX: number; offsetY: number } | null>(null)
   const GRID_SIZE = 10

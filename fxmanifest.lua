@@ -3,7 +3,7 @@ game 'gta5'
 
 author 'Advanced HUD'
 description 'Modern HUD System with React + Vite + TypeScript'
-version '1.0.0'
+version '1.0.1'
 
 shared_scripts {
     'shared/config.lua'
@@ -15,6 +15,7 @@ client_scripts {
 }
 
 server_scripts {
+    'server/version_check.lua',
     'server/main.lua',
     'server/music.lua'
 }

@@ -1,16 +1,85 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { UIPositions } from '../types'
 import './PositioningMode.css'
 
+interface MinimapAnchor {
+  x: number
+  y: number
+  width: number
+  height: number
+}
+
 interface PositioningModeProps {
   isActive: boolean
+  minimapAnchor: MinimapAnchor | null
   currentPositions: UIPositions
   onSave: (positions: UIPositions) => void
   onCancel: () => void
 }
 
-const PositioningMode = ({ isActive, currentPositions, onSave: _onSave, onCancel: _onCancel }: PositioningModeProps) => {
-  const [positions, setPositions] = useState<UIPositions>(currentPositions)
+const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, onCancel: _onCancel }: PositioningModeProps) => {
+  // Compute default card pixel position from the Lua-provided anchor (0-1 screen fractions).
+  // If no anchor yet, fall back to a rough estimate. Anchor is sent by Lua on edit-mode open.
+  const computeDefaultPixels = () => {
+    const W = window.innerWidth
+    const H = window.innerHeight
+    if (minimapAnchor) {
+      return {
+        x:      Math.round(minimapAnchor.x * W),
+        y:      Math.round(minimapAnchor.y * H),
+        width:  Math.round(minimapAnchor.width * W),
+        height: Math.round(minimapAnchor.height * H)
+      }
+    }
+    // Rough fallback if anchor hasn't arrived yet
+    return { x: 0, y: Math.round(H * 0.82), width: Math.round(W * 0.15), height: Math.round(H * 0.19) }
+  }
+
+  const getInitialMinimap = () => {
+    // If user has a saved drag position, use it; otherwise use the anchor-derived default
+    if (currentPositions?.minimap?.width && currentPositions.minimap.width > 0) {
+      return currentPositions.minimap
+    }
+    return computeDefaultPixels()
+  }
+
+  const initialPositions: UIPositions = {
+    ...currentPositions,
+    minimap: getInitialMinimap()
+  }
+
+  const [positions, setPositions] = useState<UIPositions>(initialPositions)
+  // Ref always holds the latest positions so mouseup/keydown handlers are never stale
+  const positionsRef = useRef<UIPositions>(initialPositions)
+
+  // Re-sync from parent whenever mode is opened so saved positions are always respected
+  useEffect(() => {
+    if (isActive) {
+      const synced: UIPositions = { ...currentPositions, minimap: getInitialMinimap() }
+      positionsRef.current = synced
+      setPositions(synced)
+    }
+  }, [isActive])
+
+  // When anchor arrives from Lua, update the minimap default position
+  // (only if user hasn't already dragged/saved a custom position)
+  useEffect(() => {
+    if (!minimapAnchor) return
+    const hasSaved = currentPositions?.minimap?.width && currentPositions.minimap.width > 0
+    if (hasSaved) return
+    const W = window.innerWidth
+    const H = window.innerHeight
+    const anchored = {
+      x:      Math.round(minimapAnchor.x * W),
+      y:      Math.round(minimapAnchor.y * H),
+      width:  Math.round(minimapAnchor.width * W),
+      height: Math.round(minimapAnchor.height * H)
+    }
+    const updated = { ...positionsRef.current, minimap: anchored }
+    positionsRef.current = updated
+    setPositions(updated)
+  }, [minimapAnchor])
+
   const [snapToGrid, setSnapToGrid] = useState<boolean>(true)
   const [showSafezone, setShowSafezone] = useState<boolean>(true)
   const [showAnchorZones, setShowAnchorZones] = useState<boolean>(false)
@@ -22,8 +91,20 @@ const PositioningMode = ({ isActive, currentPositions, onSave: _onSave, onCancel
   const GRID_SIZE = 10
   const SAFEZONE_MARGIN = 40
 
-  // Define draggable HUD elements - Empty (minimap removed)
-  const hudElements: any[] = []
+  const defaults = computeDefaultPixels()
+
+  // Define draggable HUD elements
+  const hudElements = [
+    {
+      id: 'minimap',
+      label: 'MINIMAP',
+      defaultX: positions?.minimap?.x ?? defaults.x,
+      defaultY: positions?.minimap?.y ?? defaults.y,
+      minWidth:  positions?.minimap?.width  ?? defaults.width,
+      minHeight: positions?.minimap?.height ?? defaults.height,
+      icon: '🗺️'
+    }
+  ]
 
   const snap = (value: number): number => {
     if (!snapToGrid) return value
@@ -57,12 +138,12 @@ const PositioningMode = ({ isActive, currentPositions, onSave: _onSave, onCancel
     const width = currentPos.width || element?.minWidth || 100
     const height = currentPos.height || element?.minHeight || 100
 
-    // Constrain to screen bounds
-    const constrainedX = Math.max(0, Math.min(newX, window.innerWidth - width))
-    const constrainedY = Math.max(0, Math.min(newY, window.innerHeight - height))
+    // Constrain to screen bounds (allow slightly negative X to match GTA's minimap left-offset default)
+    const constrainedX = Math.max(-width, Math.min(newX, window.innerWidth - width))
+    const constrainedY = Math.max(-height, Math.min(newY, window.innerHeight - height))
 
-    setPositions(prev => ({
-      ...prev,
+    const updated = {
+      ...positions,
       [draggingElement]: {
         ...currentPos,
         x: constrainedX,
@@ -70,10 +151,16 @@ const PositioningMode = ({ isActive, currentPositions, onSave: _onSave, onCancel
         width: width,
         height: height
       }
-    }))
+    }
+    positionsRef.current = updated
+    setPositions(updated)
   }
 
   const handleMouseUp = () => {
+    // Use ref so we always read the latest position (state is stale in closures)
+    if (draggingElement === 'minimap' && positionsRef.current.minimap) {
+      sendMinimapPosition(positionsRef.current.minimap)
+    }
     setDraggingElement(null)
     setResizingElement(null)
   }
@@ -81,10 +168,29 @@ const PositioningMode = ({ isActive, currentPositions, onSave: _onSave, onCancel
   // Helper to get resource name for NUI callbacks
   const getParentResourceName = () => {
     if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      return 'hud'
+      return 'solar-hud'
     }
-    const match = window.location.hostname.match(/^([^.]+)\./)
-    return match ? match[1] : 'hud'
+    return (window as any).GetParentResourceName ? (window as any).GetParentResourceName() : 'solar-hud'
+  }
+
+  // Send minimap position to client immediately
+  const sendMinimapPosition = (pos: { x: number; y: number; width?: number; height?: number }) => {
+    const d = computeDefaultPixels()
+    const payload = {
+      x: pos.x,
+      y: pos.y,
+      width:  pos.width  || d.width,
+      height: pos.height || d.height
+    }
+    console.log('[HUD UI] Sending minimap position to client:', payload)
+    fetch(`https://${getParentResourceName()}/updateMinimapPosition`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+      .then(r => r.text())
+      .then(t => console.log('[HUD UI] updateMinimapPosition response:', t))
+      .catch(err => console.error('[HUD UI] updateMinimapPosition failed:', err))
   }
 
   useEffect(() => {
@@ -104,26 +210,28 @@ const PositioningMode = ({ isActive, currentPositions, onSave: _onSave, onCancel
 
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        // Save positions to localStorage
-        const savedSettings = localStorage.getItem('hudSettings')
-        if (savedSettings) {
-          const settings = JSON.parse(savedSettings)
-          settings.uiPositions = { ...settings.uiPositions, ...positions }
-          localStorage.setItem('hudSettings', JSON.stringify(settings))
+        const latest = positionsRef.current
+        // Send minimap position to client/server for immediate in-game update
+        if (latest.minimap) {
+          sendMinimapPosition(latest.minimap)
         }
-
-        // Close positioning mode
-        fetch(`https://${getParentResourceName()}/closeEditMenu`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({})
-        }).catch(() => {})
+        // PositioningMode only owns the minimap. All card/icon positions are
+        // saved directly to localStorage by PlayerInfoCard / StatusBarCard.
+        // We must NOT spread positionsRef here — it contains stale old positions
+        // captured at mount and would overwrite the fresh card positions.
+        const saved = localStorage.getItem('hudSettings')
+        const savedSettings = saved ? JSON.parse(saved) : null
+        const mergedPositions: UIPositions = {
+          ...(savedSettings?.uiPositions || {}),
+          minimap: latest.minimap
+        } as UIPositions
+        onSave(mergedPositions)
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [isActive, positions])
+  }, [isActive, onSave])
 
   const handleUndo = () => {
     setPositions(currentPositions)

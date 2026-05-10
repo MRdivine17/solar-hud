@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect } from 'react'
 import './fontawesome' // Initialize FontAwesome
 import StatusBars from './components/StatusBars.tsx'
 import VehicleHUD from './components/VehicleHUD.tsx'
@@ -217,6 +217,7 @@ function App() {
   const [visible, setVisible] = useState(true)
   const [editMenuOpen, setEditMenuOpen] = useState(false)
   const [positioningMode, setPositioningMode] = useState(false)
+  const [minimapAnchor, setMinimapAnchor] = useState<{x:number; y:number; width:number; height:number}|null>(null)
   const [hudSettings, setHudSettings] = useState<HUDSettings>(() => {
     const saved = localStorage.getItem('hudSettings')
     return saved ? JSON.parse(saved) : defaultSettings
@@ -306,11 +307,26 @@ function App() {
     }
   })
 
-  // Expose updateHudSettings globally for child components to update state
+  // Expose updateHudSettings globally for child components to update state.
+  // Always reads the latest localStorage before merging so stale prop closures
+  // in PlayerInfoCard / StatusBarCard never clobber each other's saved positions.
   useEffect(() => {
     (window as any).updateHudSettings = (settings: HUDSettings) => {
-      setHudSettings(settings)
-      localStorage.setItem('hudSettings', JSON.stringify(settings))
+      const raw = localStorage.getItem('hudSettings')
+      const latest: HUDSettings = raw ? JSON.parse(raw) : settings
+      // Incoming `settings` wins for top-level fields (e.g. playerInfo.scale for
+      // resize); uiPositions is deep-merged so concurrent card drags can't clobber
+      // each other's saved positions in localStorage.
+      const merged: HUDSettings = {
+        ...latest,
+        ...settings,
+        uiPositions: {
+          ...(latest.uiPositions || {}),
+          ...(settings.uiPositions || {})
+        } as HUDSettings['uiPositions']
+      }
+      setHudSettings(merged)
+      localStorage.setItem('hudSettings', JSON.stringify(merged))
     }
     return () => {
       delete (window as any).updateHudSettings
@@ -352,6 +368,7 @@ function App() {
           break
         case 'openEditMenu':
           setEditMenuOpen(true)
+          if (data?.minimapAnchor) setMinimapAnchor(data.minimapAnchor)
           break
         case 'loadSettings':
           if (data) {
@@ -440,6 +457,11 @@ function App() {
           break
         case 'openPlayerInfoPositioning':
           setPositioningMode(true)
+          if (data?.minimapAnchor) setMinimapAnchor(data.minimapAnchor)
+          break
+        case 'openSimplePositioning':
+          setSimplePositioningMode(true)
+          if (data?.minimapAnchor) setMinimapAnchor(data.minimapAnchor)
           break
       }
     }
@@ -489,20 +511,6 @@ function App() {
     }, 500)
   }
 
-  const handleClosePositioningMode = useCallback(() => {
-    setPositioningMode(false)
-    
-    // Save to localStorage
-    localStorage.setItem('hudSettings', JSON.stringify(hudSettings))
-    
-    // Close NUI focus
-    fetch(`https://${GetParentResourceName()}/closePlayerInfoPositioning`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({})
-    }).catch(() => {})
-  }, [hudSettings])
-
   const handleVehicleMenuAction = (action: string, data?: any) => {
     fetch(`https://${GetParentResourceName()}/vehicleAction`, {
       method: 'POST',
@@ -520,16 +528,7 @@ function App() {
     }).catch(() => {})
   }
 
-  // ESC key handler for positioning mode (only for old PositioningMode, not SimplePositioningMode)
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && positioningMode && !simplePositioningMode) {
-        handleClosePositioningMode()
-      }
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [positioningMode, simplePositioningMode, handleClosePositioningMode])
+  // NOTE: ESC for PositioningMode is handled inside PositioningMode itself via onSave callback
 
   return (
     <>
@@ -762,11 +761,15 @@ function App() {
       />
       <PositioningMode
         isActive={positioningMode}
+        minimapAnchor={minimapAnchor}
         currentPositions={hudSettings.uiPositions || defaultSettings.uiPositions!}
         onSave={(positions) => {
           const newSettings = {
             ...hudSettings,
-            uiPositions: positions
+            uiPositions: {
+              ...(hudSettings.uiPositions || {}),
+              ...positions
+            }
           }
           handleSaveSettings(newSettings)
           setPositioningMode(false)

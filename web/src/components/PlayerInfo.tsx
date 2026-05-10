@@ -208,26 +208,21 @@ const PlayerInfoCard = memo(({
     target.releasePointerCapture(e.pointerId)
     setIsResizing(false)
     
-    // Save to localStorage and Lua ONLY on drag end (not during movement)
+    // Save to localStorage and Lua ONLY on drag end (not during movement).
+    // Read the LATEST settings from localStorage (resize updates were already
+    // pushed there via window.updateHudSettings during pointer move) — never
+    // trust the stale prop closure, which holds the scale from pointer-down.
     if (hudSettings) {
-      const finalSettings = {
-        ...hudSettings,
-        playerInfo: {
-          ...(hudSettings.playerInfo || {}),
-          scale: hudSettings.playerInfo?.scale || 100
-        }
-      }
-      
-      // Save to localStorage
-      localStorage.setItem('hudSettings', JSON.stringify(finalSettings))
-      
+      const raw = localStorage.getItem('hudSettings')
+      const finalSettings = raw ? JSON.parse(raw) : hudSettings
+
       // Save to Lua server ONCE after resize completes
       fetch(`https://${GetParentResourceName()}/saveHUDSettings`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(finalSettings)
       }).catch(() => {})
-      
+
       console.log(`[${positionKey}] Scale saved:`, finalSettings.playerInfo?.scale)
     }
     

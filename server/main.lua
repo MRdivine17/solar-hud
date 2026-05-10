@@ -1,4 +1,29 @@
 -- ============================================
+-- STARTUP BANNER - VERSION STATUS
+-- ============================================
+-- Reads the status set by server/version_check.lua (loaded before this file
+-- in fxmanifest.lua) and prints a compact summary after the full check runs.
+CreateThread(function()
+    Wait(3000) -- wait for version_check to finish its HTTP request
+    local ok, status = pcall(function()
+        return exports[GetCurrentResourceName()]:getVersionStatus()
+    end)
+    if not ok or not status then return end
+
+    local tag = ('[%s]'):format(GetCurrentResourceName())
+    if status.state == 'up-to-date' then
+        print(('\27[32m%s Version %s is up to date.\27[0m'):format(tag, status.local_))
+    elseif status.state == 'outdated' then
+        print(('\27[31m%s OUTDATED! Installed: %s  |  Latest: %s\27[0m'):format(tag, status.local_, status.remote))
+        print(('\27[33m%s Update here: %s\27[0m'):format(tag, status.url))
+    elseif status.state == 'ahead' then
+        print(('\27[33m%s Dev build (%s) - newer than latest public release (%s).\27[0m'):format(tag, status.local_, status.remote))
+    else
+        print(('\27[90m%s Version check skipped or failed (installed: %s).\27[0m'):format(tag, status.local_))
+    end
+end)
+
+-- ============================================
 -- FRAMEWORK DETECTION & INITIALIZATION
 -- ============================================
 local Framework = nil
@@ -87,6 +112,9 @@ end
 
 -- Store player HUD settings in memory (could be saved to database)
 local playerSettings = {}
+
+-- Store player minimap positions separately (per player)
+local playerMapPositions = {}
 
 -- Rate limiting system to prevent network overflow
 local saveQueue = {} -- Queue pending saves per player
@@ -178,6 +206,70 @@ AddEventHandler('hud:loadSettings', function()
         --     end
         -- end)
     end
+end)
+
+-- ============================================
+-- MINIMAP POSITION SYSTEM (Per Player)
+-- ============================================
+
+-- Event to save minimap position for a player
+RegisterNetEvent('hud:saveMinimapPosition')
+AddEventHandler('hud:saveMinimapPosition', function(positionData)
+    local source = source
+    local identifier = GetPlayerIdentifier(source)
+    
+    if not identifier then return end
+    
+    -- Store the minimap position
+    playerMapPositions[identifier] = {
+        x = positionData.x,
+        y = positionData.y,
+        width  = positionData.width  or 288,
+        height = positionData.height or 204,
+        timestamp = os.time()
+    }
+    
+    print(string.format('[HUD-SERVER] Minimap position saved for %s (src=%d): x=%s y=%s w=%s h=%s',
+        identifier, source, tostring(positionData.x), tostring(positionData.y),
+        tostring(positionData.width), tostring(positionData.height)))
+    
+    -- Optional: Save to database here
+    -- MySQL.Async.execute('UPDATE users SET minimap_position = @position WHERE identifier = @identifier', {
+    --     ['@identifier'] = identifier,
+    --     ['@position'] = json.encode(playerMapPositions[identifier])
+    -- })
+end)
+
+-- Event to load minimap position for a player
+RegisterNetEvent('hud:loadMinimapPosition')
+AddEventHandler('hud:loadMinimapPosition', function()
+    local source = source
+    local identifier = GetPlayerIdentifier(source)
+    
+    if not identifier then return end
+    
+    local position = playerMapPositions[identifier]
+    
+    if position then
+        print(string.format('[HUD-SERVER] Sending saved minimap position to src=%d: x=%s y=%s',
+            source, tostring(position.x), tostring(position.y)))
+        TriggerClientEvent('hud:receiveMinimapPosition', source, position)
+    else
+        print(string.format('[HUD-SERVER] No saved minimap position for src=%d, using default layout', source))
+        -- Send nil so client keeps the default scaleform layout untouched
+        TriggerClientEvent('hud:receiveMinimapPosition', source, nil)
+    end
+    
+end)
+
+-- Event to clear saved minimap position (reset to default layout)
+RegisterNetEvent('hud:clearMinimapPosition')
+AddEventHandler('hud:clearMinimapPosition', function()
+    local source = source
+    local identifier = GetPlayerIdentifier(source)
+    if not identifier then return end
+    playerMapPositions[identifier] = nil
+    print(string.format('[HUD-SERVER] Minimap position cleared for src=%d (%s)', source, identifier))
 end)
 
 -- Test Commands for Notifications

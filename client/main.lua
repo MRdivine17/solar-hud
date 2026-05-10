@@ -313,6 +313,9 @@ AddEventHandler('esx:playerLoaded', function(xPlayer)
     
     -- Fetch and send all data
     UpdateAllPlayerData()
+    
+    -- Request minimap position from server
+    TriggerServerEvent('hud:loadMinimapPosition')
 end)
 
 -- QBCore Player Loaded
@@ -327,6 +330,9 @@ AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
     
     -- Fetch and send all data
     UpdateAllPlayerData()
+    
+    -- Request minimap position from server
+    TriggerServerEvent('hud:loadMinimapPosition')
 end)
 
 -- QBox Player Loaded
@@ -341,6 +347,9 @@ AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
     
     -- Fetch and send all data
     UpdateAllPlayerData()
+    
+    -- Request minimap position from server
+    TriggerServerEvent('hud:loadMinimapPosition')
 end)
 
 -- ============================================
@@ -1655,41 +1664,59 @@ local minimapStyleLoaded = false
 
 -- Custom minimap position (from edit mode)
 local customMinimapPosition = nil
+local lastAppliedMinimapKey = nil -- prevents log spam when position is unchanged
 
--- Function to convert pixel position to minimap component position
-local function PixelToMinimapPosition(pixelX, pixelY, width, height)
-    -- Get screen resolution
+--[[
+    GetMinimapAnchor by glitchdetector (Feb 2018) - battle-tested formula.
+    Returns the ACTUAL minimap screen position in 0.0-1.0 fractions,
+    accounting for aspect ratio, safe-zone, and resolution.
+--]]
+local function GetMinimapAnchor()
+    local safezone = GetSafeZoneSize()
+    local safezone_x = 1.0 / 20.0
+    local safezone_y = 1.0 / 20.0
+    local aspect_ratio = GetAspectRatio(0)
+    local res_x, res_y = GetActiveScreenResolution()
+    local xscale = 1.0 / res_x
+    local yscale = 1.0 / res_y
+    local Minimap = {}
+    Minimap.width = xscale * (res_x / (4 * aspect_ratio))
+    Minimap.height = yscale * (res_y / 5.674)
+    Minimap.left_x = xscale * (res_x * (safezone_x * ((math.abs(safezone - 1.0)) * 10)))
+    Minimap.bottom_y = 1.0 - yscale * (res_y * (safezone_y * ((math.abs(safezone - 1.0)) * 10)))
+    Minimap.right_x = Minimap.left_x + Minimap.width
+    Minimap.top_y = Minimap.bottom_y - Minimap.height
+    Minimap.x = Minimap.left_x
+    Minimap.y = Minimap.top_y
+    Minimap.xunit = xscale
+    Minimap.yunit = yscale
+    return Minimap
+end
+
+-- Convert pixel drag delta to scaleform delta.
+-- Uses the anchor-derived ratio: if scaleform sizeX=0.15 produces anchor.width screen fraction,
+-- then dScaleform = dScreenFraction * (0.15 / anchor.width)
+local function PixelDeltaToScaleform(dPixelX, dPixelY)
     local screenWidth, screenHeight = GetActiveScreenResolution()
-    
-    -- GTA V minimap positioning:
-    -- X: -1 (left) to 1 (right), relative to screen width
-    -- Y: -1 (bottom) to 1 (top), relative to screen height
-    -- Width/Height: 0 to 1, as fraction of screen
-    
-    -- Convert pixel X to normalized X (-1 to 1)
-    -- Left edge (0px) = -1, Right edge (screenWidth) = 1
-    local normalizedX = (pixelX / screenWidth) * 2.0 - 1.0
-    
-    -- Convert pixel Y to normalized Y (-1 to 1)
-    -- Top edge (0px) = 1, Bottom edge (screenHeight) = -1
-    -- GTA uses inverted Y (bottom = -1, top = 1)
-    local normalizedY = -((pixelY / screenHeight) * 2.0 - 1.0)
-    
-    -- Convert size to normalized size (0 to 1)
-    local normalizedWidth = width / screenWidth
-    local normalizedHeight = height / screenHeight
-    
-    -- Adjust for minimap anchor point (center of minimap)
-    -- The position is the CENTER of the minimap, not top-left corner
-    normalizedX = normalizedX + (normalizedWidth / 2.0)
-    normalizedY = normalizedY - (normalizedHeight / 2.0)
-    
-    if Config.Debug then
-        print(string.format('[HUD] Minimap conversion: Pixel(%d,%d) -> Normalized(%.3f,%.3f) Size(%.3f,%.3f)', 
-            pixelX, pixelY, normalizedX, normalizedY, normalizedWidth, normalizedHeight))
-    end
-    
-    return normalizedX, normalizedY, normalizedWidth, normalizedHeight
+    local anchor = GetMinimapAnchor()
+    local anchorW = math.max(anchor.width, 0.0001)
+    local anchorH = math.max(anchor.height, 0.0001)
+    local scaleX = 0.15   / anchorW   -- scaleform units per screen-fraction X
+    local scaleY = 0.1889 / anchorH   -- scaleform units per screen-fraction Y
+    local dx = (dPixelX  / screenWidth)  * scaleX
+    local dy = (dPixelY / screenHeight) * scaleY
+    return dx, dy
+end
+
+-- Apply a pixel drag delta to all three minimap layout components.
+local function ApplyMinimapDelta(layout, dPixelX, dPixelY)
+    local dx, dy = PixelDeltaToScaleform(dPixelX, dPixelY)
+    SetMinimapComponentPosition('minimap',      'L', 'B',
+        layout.minimap[1]      + dx, layout.minimap[2]      + dy, layout.minimap[3],      layout.minimap[4])
+    SetMinimapComponentPosition('minimap_mask', 'L', 'B',
+        layout.minimap_mask[1] + dx, layout.minimap_mask[2] + dy, layout.minimap_mask[3], layout.minimap_mask[4])
+    SetMinimapComponentPosition('minimap_blur', 'L', 'B',
+        layout.minimap_blur[1] + dx, layout.minimap_blur[2] + dy, layout.minimap_blur[3], layout.minimap_blur[4])
 end
 
 -- Minimap positioning and configuration
@@ -1731,22 +1758,32 @@ CreateThread(function()
         
         -- Use custom position if available, otherwise use default layout
         if customMinimapPosition then
-            local x, y, w, h = PixelToMinimapPosition(
-                customMinimapPosition.x,
-                customMinimapPosition.y,
-                customMinimapPosition.width or 270,
-                customMinimapPosition.height or 200
-            )
-            
-            -- Apply custom position to all minimap components
-            SetMinimapComponentPosition('minimap', 'L', 'B', x, y, w, h)
-            SetMinimapComponentPosition('minimap_mask', 'L', 'B', x, y, w, h)
-            SetMinimapComponentPosition('minimap_blur', 'L', 'B', x, y, w, h)
+            local px = customMinimapPosition.x
+            local py = customMinimapPosition.y
+
+            -- Compute drag delta vs the ACTUAL anchor position (proven formula)
+            local anchor = GetMinimapAnchor()
+            local screenW, screenH = GetActiveScreenResolution()
+            local defPixelX = math.floor(anchor.x * screenW + 0.5)
+            local defPixelY = math.floor(anchor.y * screenH + 0.5)
+
+            local dPixelX = px - defPixelX
+            local dPixelY = py - defPixelY
+
+            ApplyMinimapDelta(layout, dPixelX, dPixelY)
+
+            local key = px .. ',' .. py
+            if lastAppliedMinimapKey ~= key then
+                lastAppliedMinimapKey = key
+                print(string.format('[HUD] Minimap: card(%d,%d) anchor(%d,%d) delta(%d,%d) res(%dx%d)',
+                    px, py, defPixelX, defPixelY, dPixelX, dPixelY, screenW, screenH))
+            end
         else
             -- Position minimap components with default layout
-            SetMinimapComponentPosition('minimap', 'L', 'B', layout.minimap[1], layout.minimap[2], layout.minimap[3], layout.minimap[4])
+            SetMinimapComponentPosition('minimap',      'L', 'B', layout.minimap[1],      layout.minimap[2],      layout.minimap[3],      layout.minimap[4])
             SetMinimapComponentPosition('minimap_mask', 'L', 'B', layout.minimap_mask[1], layout.minimap_mask[2], layout.minimap_mask[3], layout.minimap_mask[4])
             SetMinimapComponentPosition('minimap_blur', 'L', 'B', layout.minimap_blur[1], layout.minimap_blur[2], layout.minimap_blur[3], layout.minimap_blur[4])
+            lastAppliedMinimapKey = nil
         end
         
         -- Zoom level
@@ -1762,29 +1799,72 @@ end)
 
 -- NUI Callback to update minimap position from edit mode
 RegisterNUICallback('updateMinimapPosition', function(data, cb)
-    if data and data.x and data.y then
+    print('[HUD] >> updateMinimapPosition NUI callback received: ' .. json.encode(data or {}))
+    if data and data.x ~= nil and data.y ~= nil then
+        local anchor = GetMinimapAnchor()
+        local screenW, screenH = GetActiveScreenResolution()
+        local defW = math.floor(anchor.width  * screenW + 0.5)
+        local defH = math.floor(anchor.height * screenH + 0.5)
         customMinimapPosition = {
-            x = data.x,
-            y = data.y,
-            width = data.width or 270,
-            height = data.height or 200
+            x      = data.x + 0.0,
+            y      = data.y + 0.0,
+            width  = (data.width  or defW) + 0.0,
+            height = (data.height or defH) + 0.0
         }
         
-        print('[HUD] Minimap position updated: x=' .. data.x .. ', y=' .. data.y .. ', w=' .. (data.width or 270) .. ', h=' .. (data.height or 200))
+        print(string.format('[HUD] customMinimapPosition set: x=%.1f y=%.1f w=%.1f h=%.1f',
+            customMinimapPosition.x, customMinimapPosition.y, customMinimapPosition.width, customMinimapPosition.height))
         
-        cb('ok')
+        -- Reload the minimap so blips and map update to the new position
+        RefreshMinimap()
+        
+        -- Save to server for persistence
+        TriggerServerEvent('hud:saveMinimapPosition', {
+            x      = customMinimapPosition.x,
+            y      = customMinimapPosition.y,
+            width  = customMinimapPosition.width,
+            height = customMinimapPosition.height
+        })
+        
+        cb({ status = 'ok' })
     else
-        cb('error')
+        print('[HUD] ERROR: updateMinimapPosition received invalid data')
+        cb({ status = 'error', reason = 'invalid data' })
     end
 end)
 
 -- NUI Callback to reset minimap position to default
 RegisterNUICallback('resetMinimapPosition', function(data, cb)
     customMinimapPosition = nil
-    if Config.Debug then
-        print('[HUD] Minimap position reset to default')
-    end
+    lastAppliedMinimapKey = nil
+    -- Tell server to clear saved position so it won't restore on next login
+    TriggerServerEvent('hud:clearMinimapPosition')
+    print('[HUD] Minimap position reset to default layout')
     cb('ok')
+end)
+
+-- Receive minimap position from server (nil means use default layout)
+RegisterNetEvent('hud:receiveMinimapPosition')
+AddEventHandler('hud:receiveMinimapPosition', function(position)
+    if position and position.x ~= nil and position.y ~= nil then
+        local anchor = GetMinimapAnchor()
+        local screenW, screenH = GetActiveScreenResolution()
+        local defW = math.floor(anchor.width  * screenW + 0.5)
+        local defH = math.floor(anchor.height * screenH + 0.5)
+        customMinimapPosition = {
+            x      = position.x + 0.0,
+            y      = position.y + 0.0,
+            width  = (position.width  or defW) + 0.0,
+            height = (position.height or defH) + 0.0
+        }
+        print(string.format('[HUD] Minimap position loaded from server: x=%.1f y=%.1f w=%.1f h=%.1f',
+            customMinimapPosition.x, customMinimapPosition.y,
+            customMinimapPosition.width, customMinimapPosition.height))
+    else
+        -- No saved position - use default layout (don't set customMinimapPosition)
+        customMinimapPosition = nil
+        print('[HUD] No saved minimap position - using default layout')
+    end
 end)
 
 -- NUI Callback to change minimap style from web UI
@@ -1817,6 +1897,17 @@ AddEventHandler('hud:updateMinimapStyle', function(minimapStyle)
         ApplyMinimapTexture(minimapStyle)
     end
 end)
+
+-- Helper to build minimap anchor data for NUI messages
+local function BuildAnchorData()
+    local anchor = GetMinimapAnchor()
+    return {
+        x      = anchor.x,
+        y      = anchor.y,
+        width  = anchor.width,
+        height = anchor.height
+    }
+end
 
 -- Command to change minimap style
 RegisterCommand('minimapstyle', function(source, args)
@@ -1894,7 +1985,7 @@ if Config.AllowPlayersToEditSettings and Config.OpenSettingsCommand then
         SetNuiFocus(true, true)
         SendNUIMessage({
             action = 'openEditMenu',
-            data = {}
+            data = { minimapAnchor = BuildAnchorData() }
         })
     end, false)
     
@@ -1904,7 +1995,7 @@ if Config.AllowPlayersToEditSettings and Config.OpenSettingsCommand then
         SetNuiFocus(true, true)
         SendNUIMessage({
             action = 'openEditMenu',
-            data = {}
+            data = { minimapAnchor = BuildAnchorData() }
         })
     end, false)
 end
@@ -1916,7 +2007,7 @@ if Config.AllowUsersToEditLayout then
         SetNuiFocus(true, true)
         SendNUIMessage({
             action = 'openPlayerInfoPositioning',
-            data = {}
+            data = { minimapAnchor = BuildAnchorData() }
         })
     end, false)
 
@@ -1926,7 +2017,29 @@ if Config.AllowUsersToEditLayout then
         SetNuiFocus(true, true)
         SendNUIMessage({
             action = 'openPlayerInfoPositioning',
-            data = {}
+            data = { minimapAnchor = BuildAnchorData() }
+        })
+    end, false)
+end
+
+-- Simple Positioning Mode Command - Opens the map positioning edit mode
+if Config.AllowUsersToEditLayout then
+    RegisterCommand('hudposition', function()
+        if Config.Debug then print('[HUD] Opening Simple Positioning Mode...') end
+        SetNuiFocus(true, true)
+        SendNUIMessage({
+            action = 'openSimplePositioning',
+            data = { minimapAnchor = BuildAnchorData() }
+        })
+    end, false)
+
+    -- Alias command
+    RegisterCommand('hudpos', function()
+        if Config.Debug then print('[HUD] Opening Simple Positioning Mode...') end
+        SetNuiFocus(true, true)
+        SendNUIMessage({
+            action = 'openSimplePositioning',
+            data = { minimapAnchor = BuildAnchorData() }
         })
     end, false)
 end
@@ -1973,28 +2086,6 @@ end)
 RegisterNetEvent('hud:receiveSettings')
 AddEventHandler('hud:receiveSettings', function(settings)
     -- Not used - settings are managed by React localStorage
-end)
-
--- Load settings on player loaded
-RegisterNetEvent('esx:playerLoaded')
-AddEventHandler('esx:playerLoaded', function(xPlayer)
-    Wait(1000) -- Wait for ESX to fully load
-    
-    -- Settings are managed by React localStorage
-    -- Just ensure minimap is ready
-    print('[HUD] Player loaded - settings managed by React localStorage')
-    
-    -- Ensure minimap style is loaded within 5 seconds
-    local timeout = 0
-    while not minimapStyleLoaded and timeout < 50 do
-        Wait(100)
-        timeout = timeout + 1
-    end
-    
-    if not minimapStyleLoaded then
-        print('[HUD] Settings load timeout, using default minimap style')
-        minimapStyleLoaded = true
-    end
 end)
 
 -- Weapon Display System - Real-time tracking
