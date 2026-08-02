@@ -217,21 +217,34 @@ RegisterNetEvent('hud:saveMinimapPosition')
 AddEventHandler('hud:saveMinimapPosition', function(positionData)
     local source = source
     local identifier = GetPlayerIdentifier(source)
-    
-    if not identifier then return end
-    
-    -- Store the minimap position
+
+    if not identifier or type(positionData) ~= 'table' then return end
+
+    -- Positions are stored as 0.0-1.0 screen fractions so they survive a
+    -- resolution change. Legacy pixel fields are kept for older clients.
+    local fracX = tonumber(positionData.fracX)
+    local fracY = tonumber(positionData.fracY)
+
+    if not fracX or not fracY then
+        print(string.format('[HUD-SERVER] Rejected minimap position from src=%d (no fractions)', source))
+        return
+    end
+
+    -- Clamp so a malformed payload can never park the map off-screen
+    local function clamp01(v) return math.max(-0.5, math.min(1.5, v)) end
+
     playerMapPositions[identifier] = {
-        x = positionData.x,
-        y = positionData.y,
-        width  = positionData.width  or 288,
-        height = positionData.height or 204,
+        fracX = clamp01(fracX),
+        fracY = clamp01(fracY),
+        fracW = math.max(0.02, math.min(1.0, tonumber(positionData.fracW) or 0.14)),
+        fracH = math.max(0.02, math.min(1.0, tonumber(positionData.fracH) or 0.18)),
         timestamp = os.time()
     }
-    
-    print(string.format('[HUD-SERVER] Minimap position saved for %s (src=%d): x=%s y=%s w=%s h=%s',
-        identifier, source, tostring(positionData.x), tostring(positionData.y),
-        tostring(positionData.width), tostring(positionData.height)))
+
+    print(string.format('[HUD-SERVER] Minimap position saved for %s (src=%d): fracX=%.4f fracY=%.4f fracW=%.4f fracH=%.4f',
+        identifier, source,
+        playerMapPositions[identifier].fracX, playerMapPositions[identifier].fracY,
+        playerMapPositions[identifier].fracW, playerMapPositions[identifier].fracH))
     
     -- Optional: Save to database here
     -- MySQL.Async.execute('UPDATE users SET minimap_position = @position WHERE identifier = @identifier', {
@@ -251,8 +264,8 @@ AddEventHandler('hud:loadMinimapPosition', function()
     local position = playerMapPositions[identifier]
     
     if position then
-        print(string.format('[HUD-SERVER] Sending saved minimap position to src=%d: x=%s y=%s',
-            source, tostring(position.x), tostring(position.y)))
+        print(string.format('[HUD-SERVER] Sending saved minimap position to src=%d: fracX=%s fracY=%s',
+            source, tostring(position.fracX), tostring(position.fracY)))
         TriggerClientEvent('hud:receiveMinimapPosition', source, position)
     else
         print(string.format('[HUD-SERVER] No saved minimap position for src=%d, using default layout', source))

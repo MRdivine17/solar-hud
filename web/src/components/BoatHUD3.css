@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&display=swap');
 
 .boathud3-container {
   position: fixed;
@@ -8,7 +7,7 @@
   flex-direction: column;
   gap: 6px;
   z-index: 1000;
-  font-family: 'Rajdhani', sans-serif;
+  font-family: var(--hud-font-display);
 }
 
 /* Main Speed Card */

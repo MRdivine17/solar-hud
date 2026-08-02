@@ -23,8 +23,8 @@ import ProgressBar from './components/ProgressBar'
 import NotificationProgressSettings from './components/NotificationProgressSettings'
 import MusicPlayer from './components/MusicPlayer'
 import ServerLogo from './components/ServerLogo'
-import { HUDData, VehicleData, LocationData, PlayerInfo as PlayerInfoType, MoneyData, VoiceData, TimeData, WeaponData, HUDSettings } from './types'
-import { getResponsivePosition, getPositionFromRight, getPositionFromBottom, getPositionFromBottomRight } from './utils/responsive'
+import { HUDData, VehicleData, LocationData, PlayerInfo as PlayerInfoType, MoneyData, VoiceData, TimeData, WeaponData, HUDSettings, HudConfig, VehicleHudVisibility } from './types'
+import { DEFAULT_LAYOUT, cloneLayout, migrateUiPositions, readViewport } from './utils/layout'
 import './App.css'
 
 // Helper function to get the current resource name dynamically
@@ -35,47 +35,11 @@ const GetParentResourceName = (): string => {
   return (window as any).GetParentResourceName ? (window as any).GetParentResourceName() : 'solar-hud'
 }
 
-// Generate responsive default positions
-const getDefaultUIPositions = () => {
-  return {
-    minimap: getResponsivePosition(20, 800),
-    location: getResponsivePosition(20, 1020),
-    weaponDisplay: getPositionFromBottomRight(250, 350),
-    statusBars: getPositionFromBottom(20, 80),
-    vehicleHud: getPositionFromBottomRight(240, 200),
-    playerInfoContainer: getResponsivePosition(20, 20),
-    healthIcon: getPositionFromBottom(30, 310),
-    armorIcon: getPositionFromBottom(90, 310),
-    hungerIcon: getPositionFromBottom(150, 310),
-    thirstIcon: getPositionFromBottom(210, 310),
-    oxygenIcon: getPositionFromBottom(270, 310),
-    stressIcon: getPositionFromBottom(330, 310),
-    // Miniature layout
-    voiceCard_miniature: getPositionFromRight(160, 20),
-    idCard_miniature: getPositionFromRight(120, 65),
-    timeCard_miniature: getPositionFromRight(140, 100),
-    jobCard_miniature: getPositionFromRight(170, 135),
-    bankCard_miniature: getPositionFromRight(160, 170),
-    cashCard_miniature: getPositionFromRight(160, 210),
-    weaponDisplay_miniature: getPositionFromRight(200, 250),
-    // Grid layout
-    voiceCard_grid: getPositionFromRight(155, 20),
-    idCard_grid: getPositionFromRight(155, 85),
-    timeCard_grid: getPositionFromRight(155, 150),
-    jobCard_grid: getPositionFromRight(198, 215),
-    bankCard_grid: getPositionFromRight(198, 280),
-    cashCard_grid: getPositionFromRight(155, 345),
-    weaponDisplay_grid: getPositionFromRight(155, 410),
-    // Modern layout
-    voiceCard_modern: getPositionFromRight(220, 20),
-    idCard_modern: getPositionFromRight(220, 95),
-    timeCard_modern: getPositionFromRight(220, 170),
-    jobCard_modern: getPositionFromRight(220, 245),
-    bankCard_modern: getPositionFromRight(220, 320),
-    cashCard_modern: getPositionFromRight(220, 395),
-    weaponDisplay_modern: getPositionFromRight(220, 470)
-  }
-}
+/* Default positions now live in utils/layout.ts as static design-space records.
+   The old getDefaultUIPositions() read window.innerWidth/innerHeight at MODULE
+   SCOPE, so the whole table was frozen to whatever viewport existed when the
+   page first loaded and was never recomputed - not even by "Reset positions".
+   DEFAULT_LAYOUT touches no window API and resolves per-render instead. */
 
 // Hardcoded default settings (copied from default-settings.json for first-time players)
 const defaultSettings: HUDSettings = {
@@ -176,7 +140,7 @@ const defaultSettings: HUDSettings = {
     dirtyColors: { iconColor: '#ffffff', textColor: '#ffffff', labelColor: '#999999', bgColor: '#0a0a0a', iconBgColor: '#1a1a1a' },
     voiceColors: { iconColor: '#00ff00', textColor: '#00ff00', labelColor: '#999999', bgColor: '#0a0a0a', iconBgColor: '#1a1a1a' }
   },
-  uiPositions: getDefaultUIPositions(),
+  uiPositions: cloneLayout(DEFAULT_LAYOUT) as any,
   boatHUD1Colors: {
     fuelIconColor: '#ffa500',
     fuelArcColor: '#ffa500',
@@ -215,12 +179,36 @@ const defaultSettings: HUDSettings = {
 
 function App() {
   const [visible, setVisible] = useState(true)
+  // config.lua payload - null until the client answers. Server config always
+  // overrides whatever the player saved in localStorage.
+  const [hudConfig, setHudConfig] = useState<HudConfig | null>(null)
   const [editMenuOpen, setEditMenuOpen] = useState(false)
   const [positioningMode, setPositioningMode] = useState(false)
   const [minimapAnchor, setMinimapAnchor] = useState<{x:number; y:number; width:number; height:number}|null>(null)
   const [hudSettings, setHudSettings] = useState<HUDSettings>(() => {
     const saved = localStorage.getItem('hudSettings')
-    return saved ? JSON.parse(saved) : defaultSettings
+    let parsed: HUDSettings
+
+    try {
+      parsed = saved ? JSON.parse(saved) : defaultSettings
+    } catch {
+      parsed = defaultSettings
+    }
+
+    // Convert legacy raw-pixel positions into resolution-independent records.
+    // Idempotent, and an exact identity when the data was authored on the
+    // resolution the player is currently running.
+    const migrated = migrateUiPositions(parsed as any, readViewport()) as HUDSettings
+
+    if (migrated !== parsed) {
+      try {
+        localStorage.setItem('hudSettings', JSON.stringify(migrated))
+      } catch {
+        /* storage full or blocked - the in-memory copy is still correct */
+      }
+    }
+
+    return migrated
   })
   const [hudData, setHudData] = useState<HUDData>({
     health: 100,
@@ -333,6 +321,38 @@ function App() {
     }
   }, [])
 
+  /* The old pixel-based vehicleHud "TWEAKS" block lived here. It is gone:
+     positions are now design-space records, and that block clamped the value
+     and wrote the clamped result back, permanently destroying the author's
+     layout for anyone who ever loaded the HUD on a small screen. */
+
+  // Ask the client for config.lua as soon as the UI mounts. The client also
+  // pushes it on resource start / spawn, but the UI may not exist yet then.
+  useEffect(() => {
+    let cancelled = false
+
+    const requestConfig = () => {
+      fetch(`https://${GetParentResourceName()}/requestConfig`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+        .then(res => res.json())
+        .then(cfg => {
+          if (!cancelled && cfg && cfg.hud) setHudConfig(cfg as HudConfig)
+        })
+        .catch(() => {})
+    }
+
+    requestConfig()
+    const retry = setTimeout(requestConfig, 2000)
+
+    return () => {
+      cancelled = true
+      clearTimeout(retry)
+    }
+  }, [])
+
   // Send minimap style to client on app load - CRITICAL FOR PERSISTENCE
   useEffect(() => {
     const sendMinimapStyle = () => {
@@ -361,6 +381,11 @@ function App() {
       const { action, data } = event.data
 
       switch (action) {
+        case 'setConfig':
+          if (data) {
+            setHudConfig(data as HudConfig)
+          }
+          break
         case 'setVisible':
           if (data && typeof data.visible !== 'undefined') {
             setVisible(data.visible)
@@ -498,7 +523,7 @@ function App() {
     // Use hardcoded defaults from TSX (NOT from JSON file)
     const newSettings: HUDSettings = {
       ...defaultSettings,
-      uiPositions: defaultSettings.uiPositions
+      uiPositions: cloneLayout(DEFAULT_LAYOUT) as any
     }
     
     // Save to localStorage
@@ -530,12 +555,74 @@ function App() {
 
   // NOTE: ESC for PositioningMode is handled inside PositioningMode itself via onSave callback
 
+  // ============================================================
+  // CONFIG ENFORCEMENT
+  // config.lua can only ever REMOVE things a player enabled locally -
+  // a bar/card disabled server-side can never be re-enabled from the edit menu.
+  // ============================================================
+  const gateBar = (bar: HUDSettings['health'], allowed?: boolean) =>
+    allowed === false ? { ...bar, visible: false } : bar
+
+  const effectiveSettings: HUDSettings = hudConfig
+    ? {
+        ...hudSettings,
+        health: gateBar(hudSettings.health, hudConfig.statusBars.health),
+        armor: gateBar(hudSettings.armor, hudConfig.statusBars.armor),
+        hunger: gateBar(hudSettings.hunger, hudConfig.statusBars.hunger),
+        thirst: gateBar(hudSettings.thirst, hudConfig.statusBars.thirst),
+        oxygen: gateBar(hudSettings.oxygen, hudConfig.statusBars.oxygen),
+        stress: gateBar(hudSettings.stress, hudConfig.statusBars.stress),
+        speedUnit: hudSettings.speedUnit || hudConfig.format.speedUnit,
+        boatSpeedUnit: hudSettings.boatSpeedUnit || hudConfig.format.speedUnit,
+        playerInfo: hudSettings.playerInfo
+          ? {
+              ...hudSettings.playerInfo,
+              showId: hudSettings.playerInfo.showId && hudConfig.components.serverId,
+              showTime: hudSettings.playerInfo.showTime && hudConfig.components.time,
+              showJob: hudSettings.playerInfo.showJob && hudConfig.components.job,
+              showBank: hudSettings.playerInfo.showBank && hudConfig.components.bankBalance,
+              showCash: hudSettings.playerInfo.showCash && hudConfig.components.cashBalance,
+              showDirty: hudSettings.playerInfo.showDirty && hudConfig.components.dirtyMoneyBalance,
+              showVoice: hudSettings.playerInfo.showVoice && hudConfig.components.voiceOrRadio,
+              showLogo: hudSettings.playerInfo.showLogo && hudConfig.components.serverLogo
+            }
+          : hudSettings.playerInfo
+      }
+    : hudSettings
+
+  // Per-element vehicle HUD toggles from Config.VehicleHUD
+  const vehicleHudShow: VehicleHudVisibility = {
+    showSpeed: hudConfig?.vehicleHud.showSpeed ?? true,
+    showFuel: hudConfig?.vehicleHud.showFuel ?? true,
+    showRPM: hudConfig?.vehicleHud.showRPM ?? true,
+    showGear: hudConfig?.vehicleHud.showGear ?? true,
+    showDamage: hudConfig?.vehicleHud.showDamage ?? true,
+    showDoorWarning: hudConfig?.vehicleHud.showDoorWarning ?? true,
+    showSeatbeltWarning: hudConfig?.vehicleHud.showSeatbeltWarning ?? true,
+    showEngineWarning: hudConfig?.vehicleHud.showEngineWarning ?? true
+  }
+
+  // Config.VehicleHUD.enabled = false kills every in-vehicle gauge
+  const vehicleHudEnabled = hudConfig?.vehicleHud.enabled !== false
+  const showVehicleHud = vehicleData.inVehicle && vehicleHudEnabled
+
+  // Config.ShowComponents.weapon
+  const weaponAllowed = hudConfig?.components.weapon !== false
+
+  // Config.Currency / Config.NumberFormat
+  const currency = hudConfig?.format.currency ?? '$'
+  const numberFormat = hudConfig?.format.numberFormat ?? 'en-US'
+
+  // Config.DistanceMeasurement (boat depth / wave readouts)
+  const distanceUnit = hudConfig?.format.distanceUnit ?? 'meters'
+
   return (
     <>
-      <NotificationContainer 
+      <NotificationContainer
         position={hudSettings.notification?.position || 'bottom-left'}
         successColor={hudSettings.notification?.successColor || '#10b981'}
         errorColor={hudSettings.notification?.errorColor || '#ef4444'}
+        warningColor={hudSettings.notification?.warningColor || '#f59e0b'}
         infoColor={hudSettings.notification?.infoColor || '#3b82f6'}
         textColor={hudSettings.notification?.textColor || '#ffffff'}
         bgColor={hudSettings.notification?.bgColor || '#141419'}
@@ -558,45 +645,51 @@ function App() {
       {visible && (
         <div className="hud-container">
           {positioningMode && (
-            <div style={{
-              position: 'fixed',
-              top: '20px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-              background: 'rgba(59, 130, 246, 0.95)',
-              color: 'white',
-              padding: '12px 24px',
-              borderRadius: '8px',
-              fontSize: '14px',
-              fontWeight: 'bold',
-              zIndex: 99999,
-              boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
-              pointerEvents: 'none'
-            }}>
-              🎯 POSITIONING MODE - Drag cards to move | Press ESC to save
+            <div className="positioning-banner">
+              <span className="positioning-banner-dot" />
+              POSITIONING MODE
+              <span className="positioning-banner-sep">/</span>
+              DRAG TO MOVE
+              <span className="positioning-banner-sep">/</span>
+              ESC TO SAVE
             </div>
           )}
-          <ServerLogo positioningMode={positioningMode} hudSettings={hudSettings} />
-          <PlayerInfo 
-            playerInfo={playerInfo} 
-            money={money} 
+          <ServerLogo positioningMode={positioningMode && (hudConfig?.permissions.editLogo !== false)} hudSettings={effectiveSettings} />
+          <PlayerInfo
+            playerInfo={playerInfo}
+            money={money}
             time={time}
             voice={_voice}
-            settings={hudSettings.playerInfo}
+            settings={effectiveSettings.playerInfo}
             positioningMode={positioningMode}
-            hudSettings={hudSettings}
+            hudSettings={effectiveSettings}
+            currency={currency}
+            numberFormat={numberFormat}
+            showVoiceWaveAnimation={hudConfig?.voice.showWaveAnimation !== false}
           />
-          <Location data={locationData} settings={hudSettings} positioningMode={positioningMode} />
+          <Location
+            data={locationData}
+            settings={effectiveSettings}
+            positioningMode={positioningMode}
+            moveCompassWhenHidden={hudConfig?.minimap.moveCompassWhenHidden !== false}
+            minimapHeight={hudConfig?.minimap.size ?? 180}
+          />
           <div className="minimap"></div>
-          <StatusBars 
-            data={hudData} 
-            settings={hudSettings}
+          <StatusBars
+            data={hudData}
+            settings={effectiveSettings}
             positioningMode={positioningMode}
           />
-          {vehicleData.inVehicle && hudSettings.vehicleHudStyle === 'default' && (!vehicleData.isBoat || hudSettings.useVehicleHudForBoats) && ((!vehicleData.isPlane || hudSettings.useVehicleHudForAircraft) && (!vehicleData.isHelicopter || hudSettings.useVehicleHudForHelicopters)) && (
-            <VehicleHUD data={vehicleData} speedUnit={hudSettings.speedUnit || 'kmh'} />
+          {showVehicleHud && effectiveSettings.vehicleHudStyle === 'default' && (!vehicleData.isBoat || effectiveSettings.useVehicleHudForBoats) && ((!vehicleData.isPlane || effectiveSettings.useVehicleHudForAircraft) && (!vehicleData.isHelicopter || effectiveSettings.useVehicleHudForHelicopters)) && (
+            <VehicleHUD
+              data={vehicleData}
+              speedUnit={effectiveSettings.speedUnit || 'kmh'}
+              show={vehicleHudShow}
+              positioningMode={positioningMode}
+              hudSettings={effectiveSettings}
+            />
           )}
-          {vehicleData.inVehicle && hudSettings.vehicleHudStyle === 'circular' && (!vehicleData.isBoat || hudSettings.useVehicleHudForBoats) && ((!vehicleData.isPlane || hudSettings.useVehicleHudForAircraft) && (!vehicleData.isHelicopter || hudSettings.useVehicleHudForHelicopters)) && (
+          {showVehicleHud && effectiveSettings.vehicleHudStyle === 'circular' && (!vehicleData.isBoat || effectiveSettings.useVehicleHudForBoats) && ((!vehicleData.isPlane || effectiveSettings.useVehicleHudForAircraft) && (!vehicleData.isHelicopter || effectiveSettings.useVehicleHudForHelicopters)) && (
             <VehicleHUD2
               speed={vehicleData.speed}
               maxSpeed={200}
@@ -608,10 +701,11 @@ function App() {
               lights={vehicleData.lights || false}
               doors={vehicleData.doorOpen || false}
               engine={vehicleData.engineOn || false}
-              speedUnit={hudSettings.speedUnit || 'kmh'}
+              speedUnit={effectiveSettings.speedUnit || 'kmh'}
+              show={vehicleHudShow}
             />
           )}
-          {vehicleData.inVehicle && hudSettings.vehicleHudStyle === 'style3' && (!vehicleData.isBoat || hudSettings.useVehicleHudForBoats) && ((!vehicleData.isPlane || hudSettings.useVehicleHudForAircraft) && (!vehicleData.isHelicopter || hudSettings.useVehicleHudForHelicopters)) && (
+          {showVehicleHud && effectiveSettings.vehicleHudStyle === 'style3' && (!vehicleData.isBoat || effectiveSettings.useVehicleHudForBoats) && ((!vehicleData.isPlane || effectiveSettings.useVehicleHudForAircraft) && (!vehicleData.isHelicopter || effectiveSettings.useVehicleHudForHelicopters)) && (
             <VehicleHUDStyle3
               speed={vehicleData.speed}
               rpm={vehicleData.rpm}
@@ -624,10 +718,11 @@ function App() {
               doors={vehicleData.doorOpen || false}
               leftSignal={vehicleData.indicators?.left || false}
               rightSignal={vehicleData.indicators?.right || false}
-              speedUnit={hudSettings.speedUnit || 'kmh'}
+              speedUnit={effectiveSettings.speedUnit || 'kmh'}
+              show={vehicleHudShow}
             />
           )}
-          {vehicleData.inVehicle && hudSettings.vehicleHudStyle === 'style4' && (!vehicleData.isBoat || hudSettings.useVehicleHudForBoats) && ((!vehicleData.isPlane || hudSettings.useVehicleHudForAircraft) && (!vehicleData.isHelicopter || hudSettings.useVehicleHudForHelicopters)) && (
+          {showVehicleHud && effectiveSettings.vehicleHudStyle === 'style4' && (!vehicleData.isBoat || effectiveSettings.useVehicleHudForBoats) && ((!vehicleData.isPlane || effectiveSettings.useVehicleHudForAircraft) && (!vehicleData.isHelicopter || effectiveSettings.useVehicleHudForHelicopters)) && (
             <VehicleHUDStyle4
               speed={vehicleData.speed}
               rpm={vehicleData.rpm}
@@ -640,10 +735,11 @@ function App() {
               doors={vehicleData.doorOpen || false}
               leftSignal={vehicleData.indicators?.left || false}
               rightSignal={vehicleData.indicators?.right || false}
-              speedUnit={hudSettings.speedUnit || 'kmh'}
+              speedUnit={effectiveSettings.speedUnit || 'kmh'}
+              show={vehicleHudShow}
             />
           )}
-          {vehicleData.inVehicle && vehicleData.isBoat && !hudSettings.useVehicleHudForBoats && hudSettings.boatHudStyle === 'boat1' && (
+          {showVehicleHud && vehicleData.isBoat && !effectiveSettings.useVehicleHudForBoats && effectiveSettings.boatHudStyle === 'boat1' && (
             <BoatHUD
               speed={vehicleData.speed}
               fuel={vehicleData.fuel}
@@ -652,10 +748,10 @@ function App() {
               lights={vehicleData.lights || false}
               engineOn={vehicleData.engineOn || false}
               direction={locationData.direction || 'N'}
-              speedUnit={hudSettings.boatSpeedUnit || 'mph'}
+              speedUnit={effectiveSettings.boatSpeedUnit || 'mph'}
             />
           )}
-          {vehicleData.inVehicle && vehicleData.isBoat && !hudSettings.useVehicleHudForBoats && hudSettings.boatHudStyle === 'boat2' && (
+          {showVehicleHud && vehicleData.isBoat && !effectiveSettings.useVehicleHudForBoats && effectiveSettings.boatHudStyle === 'boat2' && (
             <BoatHUD2
               speed={vehicleData.speed}
               fuel={vehicleData.fuel}
@@ -664,10 +760,10 @@ function App() {
               lights={vehicleData.lights || false}
               engineOn={vehicleData.engineOn || false}
               gear={vehicleData.gear}
-              speedUnit={hudSettings.boatSpeedUnit || 'mph'}
+              speedUnit={effectiveSettings.boatSpeedUnit || 'mph'}
             />
           )}
-          {vehicleData.inVehicle && vehicleData.isBoat && !hudSettings.useVehicleHudForBoats && hudSettings.boatHudStyle === 'boat3' && (
+          {showVehicleHud && vehicleData.isBoat && !effectiveSettings.useVehicleHudForBoats && effectiveSettings.boatHudStyle === 'boat3' && (
             <BoatHUD3
               speed={vehicleData.speed}
               fuel={vehicleData.fuel}
@@ -675,13 +771,14 @@ function App() {
               anchor={vehicleData.anchor || false}
               lights={vehicleData.lights || false}
               engineOn={vehicleData.engineOn || false}
-              speedUnit={hudSettings.boatSpeedUnit || 'mph'}
+              speedUnit={effectiveSettings.boatSpeedUnit || 'mph'}
               waveHeight={vehicleData.waveHeight || 0}
               waterDepth={vehicleData.waterDepth || 0}
               compassHeading={vehicleData.compassHeading || 0}
+              distanceUnit={distanceUnit}
             />
           )}
-          {vehicleData.inVehicle && vehicleData.isPlane && !hudSettings.useVehicleHudForAircraft && hudSettings.flightHudStyle === 'flight1' && (
+          {showVehicleHud && vehicleData.isPlane && !effectiveSettings.useVehicleHudForAircraft && effectiveSettings.flightHudEnabled !== false && effectiveSettings.flightHudStyle === 'flight1' && (
             <FlightHUD
               pitch={vehicleData.pitch || 0}
               roll={vehicleData.roll || 0}
@@ -692,11 +789,11 @@ function App() {
               engineOn={vehicleData.engineOn || false}
               lights={vehicleData.lights || false}
               gearDown={vehicleData.gearDown || false}
-              speedUnit={hudSettings.flightSpeedUnit || 'mph'}
+              speedUnit={effectiveSettings.flightSpeedUnit || 'mph'}
             />
           )}
           {/* Helicopter HUD - Shows when in helicopter and not using vehicle HUD */}
-          {vehicleData.inVehicle && vehicleData.isHelicopter && !hudSettings.useVehicleHudForHelicopters && (
+          {showVehicleHud && vehicleData.isHelicopter && !effectiveSettings.useVehicleHudForHelicopters && effectiveSettings.flightHudEnabled !== false && (
             <HelicopterHUD
               pitch={vehicleData.pitch || 0}
               roll={vehicleData.roll || 0}
@@ -706,17 +803,17 @@ function App() {
               fuel={vehicleData.fuel}
               engineOn={vehicleData.engineOn || false}
               lights={vehicleData.lights || false}
-              speedUnit={hudSettings.helicopterSpeedUnit || 'mph'}
+              speedUnit={effectiveSettings.helicopterSpeedUnit || 'mph'}
             />
           )}
 
-          {(weapon.hasWeapon || positioningMode) && (
-            <WeaponDisplay 
+          {weaponAllowed && (weapon.hasWeapon || positioningMode) && (
+            <WeaponDisplay
               weapon={weapon}
-              settings={hudSettings.playerInfo}
-              position={hudSettings.uiPositions?.weaponDisplay}
+              settings={effectiveSettings.playerInfo}
+              position={effectiveSettings.uiPositions?.weaponDisplay}
               positioningMode={positioningMode}
-              hudSettings={hudSettings}
+              hudSettings={effectiveSettings}
             />
           )}
 
@@ -727,7 +824,7 @@ function App() {
             speed={vehicleData.speed}
             indicators={vehicleData.indicators}
             isStalling={vehicleData.isPlane && (vehicleData.altitude || 0) > 200 && vehicleData.speed * 0.539957 < 60}
-            seatbeltSoundsEnabled={hudSettings.seatbeltSoundsEnabled ?? true}
+            seatbeltSoundsEnabled={(hudConfig?.seatbelt.enabled !== false) && (hudSettings.seatbeltSoundsEnabled ?? true)}
           />
         </div>
       )}
@@ -784,6 +881,7 @@ function App() {
       />
       <SimplePositioningMode
         isActive={simplePositioningMode}
+        minimapAnchor={minimapAnchor}
         settings={hudSettings}
         hudData={hudData}
         playerInfo={playerInfo}

@@ -32,7 +32,7 @@
   font-weight: 700;
   color: #ffffff;
   line-height: 1;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
   text-shadow: 0 0 20px rgba(255, 255, 255, 0.5);
   margin-bottom: 5px;
 }
@@ -43,7 +43,7 @@
   color: rgba(255, 255, 255, 0.8);
   letter-spacing: 2px;
   margin-bottom: 20px;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
 }
 
 .hud2-unit-below {
@@ -53,7 +53,7 @@
   letter-spacing: 2px;
   margin-bottom: 12px;
   margin-top: 4px;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
 }
 
 .hud2-icons {
@@ -213,5 +213,5 @@
 }
 
 .gear-number {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
 }

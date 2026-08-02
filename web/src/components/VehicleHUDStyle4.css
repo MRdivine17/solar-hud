@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
 
 .style4-hud-container {
   position: fixed;
@@ -27,7 +26,7 @@
 
 .style4-speed-number {
   position: absolute;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
   font-size: 16px;
   font-weight: 700;
   color: #ffffff;
@@ -167,7 +166,7 @@
 
 .style4-gear-number {
   position: absolute;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
   font-size: 16px;
   font-weight: 700;
   color: #ffffff;
@@ -259,7 +258,7 @@
 }
 
 .style4-minimal-row span {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
   font-size: 16px;
   font-weight: 700;
   text-shadow: 0 0 4px rgba(0, 0, 0, 0.8);

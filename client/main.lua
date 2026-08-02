@@ -1,10 +1,60 @@
-local hudActive = true
+local hudActive = Config.HUD.enabled ~= false
 local playerData = {}
 local Framework = nil
 local FrameworkName = "standalone"
 local ESX = nil
 local QBCore = nil
 local QBX = nil
+
+-- ============================================
+-- MINIMAP STATE (declared here so every thread shares the SAME upvalue)
+-- Previously these were assigned as globals on resource start but re-declared
+-- as locals further down, so Config.Minimap.shape never reached the layout thread.
+-- ============================================
+local currentMinimapStyle = Config.Minimap.shape or 'rounded'
+local minimapStyleLoaded = false
+local minimapUserToggle = true   -- flipped by /toggleminimap
+local minimapVisible = nil       -- last state pushed to DisplayRadar
+local seatbeltOn = false         -- shared by seatbelt thread + vehicle menu
+local boatAnchorActive = false   -- shared by /boatanchor keybind + vehicle menu
+local anchoredVehicle = nil
+
+-- Forward declarations: these are defined further down with the minimap layout
+-- helpers, but RefreshMinimap (defined above them) has to be able to call them.
+-- Without this they would resolve to nil globals instead of the locals.
+local ApplyCurrentMinimapLayout
+local ForceMinimapRelayout
+
+-- Is the player currently inside any vehicle (cheap cached check)
+local function IsInVehicle()
+    return GetVehiclePedIsIn(PlayerPedId(), false) ~= 0
+end
+
+-- Single source of truth for radar visibility.
+-- Honours: Config.Minimap.enabled, Config.Minimap.showOnFoot, Config.HUD.hideInVehicle,
+-- Config.HUD.hideInPauseMenu, the /hud toggle and the /toggleminimap toggle.
+local function ShouldShowMinimap()
+    if not Config.Minimap.enabled then return false end
+    if not minimapUserToggle then return false end
+    if not hudActive then return false end
+    if Config.HUD.hideInPauseMenu and IsPauseMenuActive() then return false end
+
+    if IsInVehicle() then
+        return not Config.HUD.hideInVehicle
+    end
+
+    return Config.Minimap.showOnFoot == true
+end
+
+-- Apply the computed state.
+-- DisplayRadar is re-issued every call so another resource turning the radar
+-- back on cannot silently defeat Config.Minimap.showOnFoot / hideInVehicle.
+local function ApplyMinimapVisibility(_force)
+    local shouldShow = ShouldShowMinimap()
+    minimapVisible = shouldShow
+    DisplayRadar(shouldShow)
+    return shouldShow
+end
 
 -- ============================================
 -- FRAMEWORK DETECTION & INITIALIZATION
@@ -106,25 +156,130 @@ local function ShowCustomNotification(type, title, message)
     })
 end
 
+-- ============================================
+-- CONFIG -> NUI BRIDGE
+-- Everything the React layer needs in order to honour config.lua.
+-- Sent on resource start, on spawn, and whenever the UI asks for it.
+-- ============================================
+local function BuildHudConfigPayload()
+    return {
+        hud = {
+            enabled = Config.HUD.enabled,
+            hideInVehicle = Config.HUD.hideInVehicle,
+            hideInPauseMenu = Config.HUD.hideInPauseMenu
+        },
+        statusBars = {
+            health = Config.StatusBars.health.enabled,
+            armor  = Config.StatusBars.armor.enabled,
+            hunger = Config.StatusBars.hunger.enabled,
+            thirst = Config.StatusBars.thirst.enabled,
+            oxygen = Config.StatusBars.oxygen.enabled,
+            stress = Config.StatusBars.stress.enabled and Config.Stress.enabled
+        },
+        components = {
+            voiceOrRadio        = Config.ShowComponents.voiceOrRadio,
+            serverId            = Config.ShowComponents.serverId,
+            time                = Config.ShowComponents.time,
+            job                 = Config.ShowComponents.job,
+            gang                = Config.ShowComponents.gang,
+            bankBalance         = Config.ShowComponents.bankBalance,
+            cashBalance         = Config.ShowComponents.cashBalance,
+            dirtyMoneyBalance   = Config.ShowComponents.dirtyMoneyBalance,
+            weapon              = Config.ShowComponents.weapon,
+            serverLogo          = Config.ShowComponents.serverLogo
+        },
+        vehicleHud = {
+            enabled             = Config.VehicleHUD.enabled,
+            showSpeed           = Config.VehicleHUD.showSpeed,
+            showFuel            = Config.VehicleHUD.showFuel,
+            showRPM             = Config.VehicleHUD.showRPM,
+            showGear            = Config.VehicleHUD.showGear,
+            showDamage          = Config.VehicleHUD.showDamage,
+            showOdometer        = Config.VehicleHUD.showOdometer,
+            showDoorWarning     = Config.VehicleHUD.showDoorWarning,
+            showSeatbeltWarning = Config.VehicleHUD.showSeatbeltWarning and Config.Seatbelt.enabled,
+            showEngineWarning   = Config.VehicleHUD.showEngineWarning
+        },
+        minimap = {
+            enabled              = Config.Minimap.enabled,
+            shape                = Config.Minimap.shape,
+            showOnFoot           = Config.Minimap.showOnFoot,
+            showCompassOnFoot    = Config.Minimap.showCompassOnFoot,
+            showStreetName       = Config.Minimap.showStreetName,
+            showZoneName         = Config.Minimap.showZoneName,
+            moveCompassWhenHidden = Config.Minimap.moveCompassWhenHidden,
+            size                 = Config.Minimap.size
+        },
+        voice = {
+            showWaveAnimation = Config.Voice.showWaveAnimation,
+            showRadioChannel  = Config.Voice.showRadioChannel
+        },
+        format = {
+            currency     = Config.Currency,
+            numberFormat = Config.NumberFormat,
+            speedUnit    = Config.SpeedMeasurement,
+            distanceUnit = Config.DistanceMeasurement,
+            locale       = Config.Locale,
+            timeFormat   = Config.HUD.timeFormat
+        },
+        permissions = {
+            editSettings = Config.AllowPlayersToEditSettings,
+            editLayout   = Config.AllowUsersToEditLayout,
+            editLogo     = Config.AllowServerLogoEditing
+        },
+        seatbelt = { enabled = Config.Seatbelt.enabled },
+        stress   = { enabled = Config.Stress.enabled }
+    }
+end
+
+local function SendHudConfig()
+    SendNUIMessage({
+        action = 'setConfig',
+        data = BuildHudConfigPayload()
+    })
+    if Config.Debug then print('[HUD] Config payload sent to NUI') end
+end
+
+-- The UI asks for the config once it has mounted (it may mount after the
+-- resource-start push, so this guarantees delivery).
+RegisterNUICallback('requestConfig', function(_, cb)
+    SendHudConfig()
+    cb(BuildHudConfigPayload())
+end)
+
 -- Function to refresh minimap display
 local function RefreshMinimap()
-    -- Set minimap component position to force refresh
+    if not Config.Minimap.enabled then
+        DisplayRadar(false)
+        minimapVisible = false
+        return
+    end
+
+    -- Put the current rect in place BEFORE forcing the radar to rebuild,
+    -- otherwise the blip layer is projected onto the old rect.
+    if ApplyCurrentMinimapLayout then ApplyCurrentMinimapLayout() end
+
     SetRadarBigmapEnabled(true, false)
     Citizen.Wait(0)
     SetRadarBigmapEnabled(false, false)
-    
-    -- Ensure radar is displayed
-    DisplayRadar(true)
-    
-    -- Force minimap to update
+    Citizen.Wait(0)
+
+    if ApplyCurrentMinimapLayout then ApplyCurrentMinimapLayout() end
+
+    -- Restore the state config asks for (NOT an unconditional DisplayRadar(true),
+    -- which is what used to break Config.Minimap.showOnFoot)
+    ApplyMinimapVisibility(true)
+
+    -- Nudge streaming so the map tiles render (fixes a blank minimap on spawn)
     Citizen.Wait(100)
     local ped = PlayerPedId()
     local coords = GetEntityCoords(ped)
     SetFocusPosAndVel(coords.x, coords.y, coords.z, 0.0, 0.0, 0.0)
     Citizen.Wait(100)
     ClearFocus()
-    
-    -- print('[HUD] Minimap refreshed')
+
+    -- Final rebuild so blips / player pin / waypoint match the map exactly
+    if ForceMinimapRelayout then ForceMinimapRelayout() end
 end
 
 -- Refresh minimap when resource starts
@@ -154,14 +309,22 @@ AddEventHandler('onClientResourceStart', function(resourceName)
             if Config.Debug then print('[HUD] Logo config sent: ' .. Config.ServerLogo.logoPath) end
         end
         
-        -- Minimap style is loaded from localStorage in React (no server-side loading)
-        if Config.Debug then print('[HUD] Minimap style will be loaded from localStorage') end
-        currentMinimapStyle = Config.Minimap.shape or 'rounded' -- Use config default
+        -- Push config.lua to the UI so it can honour ShowComponents / StatusBars / formats
+        SendHudConfig()
+
+        -- Initial HUD visibility comes from Config.HUD.enabled
+        SendNUIMessage({ action = 'setVisible', data = { visible = hudActive } })
+
+        -- Minimap style: config.lua is the default, the UI may override it later
+        currentMinimapStyle = Config.Minimap.shape or 'rounded'
         minimapStyleLoaded = true
-        
-        -- Only refresh minimap if enabled
+        if Config.Debug then print('[HUD] Minimap style from config: ' .. tostring(currentMinimapStyle)) end
+
         if Config.Minimap.enabled then
             RefreshMinimap()
+        else
+            DisplayRadar(false)
+            minimapVisible = false
         end
     end
 end)
@@ -169,29 +332,61 @@ end)
 -- Refresh minimap when player spawns
 AddEventHandler('playerSpawned', function()
     Citizen.Wait(1000)
-    
+
     -- Wait for minimap style if not loaded yet
     local timeout = 0
     while not minimapStyleLoaded and timeout < 30 do
         Citizen.Wait(100)
         timeout = timeout + 1
     end
-    
+
+    SendHudConfig()
     RefreshMinimap()
 end)
 
 -- Also refresh on first frame
 Citizen.CreateThread(function()
     Citizen.Wait(3000) -- Wait 3 seconds after script load
-    
+
     -- Wait for minimap style if not loaded yet
     local timeout = 0
     while not minimapStyleLoaded and timeout < 30 do
         Citizen.Wait(100)
         timeout = timeout + 1
     end
-    
+
+    SendHudConfig()
     RefreshMinimap()
+end)
+
+-- ============================================
+-- HUD / MINIMAP VISIBILITY MANAGER
+-- Owns DisplayRadar and the NUI setVisible state so that
+-- Config.Minimap.showOnFoot, Config.HUD.hideInVehicle and
+-- Config.HUD.hideInPauseMenu can never fight each other.
+-- ============================================
+CreateThread(function()
+    local lastUiVisible = nil
+
+    while true do
+        Wait(250)
+
+        -- Radar
+        ApplyMinimapVisibility(false)
+
+        -- NUI
+        local uiVisible = hudActive
+        if Config.HUD.hideInPauseMenu and IsPauseMenuActive() then
+            uiVisible = false
+        elseif Config.HUD.hideInVehicle and IsInVehicle() then
+            uiVisible = false
+        end
+
+        if lastUiVisible ~= uiVisible then
+            lastUiVisible = uiVisible
+            SendNUIMessage({ action = 'setVisible', data = { visible = uiVisible } })
+        end
+    end
 end)
 
 -- Function to fetch and send all player data
@@ -304,8 +499,9 @@ end
 RegisterNetEvent('esx:playerLoaded')
 AddEventHandler('esx:playerLoaded', function(xPlayer)
     playerData = xPlayer
-    SendNUIMessage({ action = 'setVisible', data = { visible = true } })
-    
+    SendHudConfig()
+    SendNUIMessage({ action = 'setVisible', data = { visible = hudActive } })
+
     print('[HUD] ESX Player loaded')
     
     -- Wait for ESX to fully load
@@ -321,9 +517,10 @@ end)
 -- QBCore Player Loaded
 RegisterNetEvent('QBCore:Client:OnPlayerLoaded')
 AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
-    SendNUIMessage({ action = 'setVisible', data = { visible = true } })
-    
-    print('[HUD] QBCore Player loaded')
+    SendHudConfig()
+    SendNUIMessage({ action = 'setVisible', data = { visible = hudActive } })
+
+    print('[HUD] QBCore / QBox Player loaded')
     
     -- Wait for QBCore to fully load
     Wait(2000)
@@ -335,22 +532,8 @@ AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
     TriggerServerEvent('hud:loadMinimapPosition')
 end)
 
--- QBox Player Loaded
-RegisterNetEvent('QBCore:Client:OnPlayerLoaded')
-AddEventHandler('QBCore:Client:OnPlayerLoaded', function()
-    SendNUIMessage({ action = 'setVisible', data = { visible = true } })
-    
-    print('[HUD] QBox Player loaded')
-    
-    -- Wait for QBox to fully load
-    Wait(2000)
-    
-    -- Fetch and send all data
-    UpdateAllPlayerData()
-    
-    -- Request minimap position from server
-    TriggerServerEvent('hud:loadMinimapPosition')
-end)
+-- QBox fires the same QBCore:Client:OnPlayerLoaded event, which is already
+-- handled above. Registering it twice made every load run the handler twice.
 
 -- ============================================
 -- JOB CHANGE EVENTS (Framework-Agnostic)
@@ -559,10 +742,11 @@ CreateThread(function()
 end)
 
 -- Update HUD - Optimized health tracking
+-- Tick rate comes from Config.HUD.refreshRate (clamped to a sane floor).
 CreateThread(function()
     while true do
-        Wait(250) -- Update every 250ms (reduced from 100ms for better performance)
-        
+        Wait(math.max(50, tonumber(Config.HUD.refreshRate) or 250))
+
         if hudActive then
             local ped = PlayerPedId()
             local health = GetEntityHealth(ped)
@@ -582,10 +766,14 @@ CreateThread(function()
                 -- Underwater oxygen (depletes when underwater)
                 oxygenLevel = math.floor(GetPlayerUnderwaterTimeRemaining(PlayerId()) * 10)
                 showOxygen = true
+            elseif Config.StatusBars.oxygen.showOnlyUnderwater then
+                -- Config says the bar is for diving only - never show it on land
+                oxygenLevel = 100
+                showOxygen = false
             else
                 -- On land - track stamina (running exhaustion)
                 local staminaRaw = GetPlayerSprintStaminaRemaining(PlayerId())
-                
+
                 -- Hide oxygen bar when stamina is full
                 if staminaRaw <= 0.5 then
                     oxygenLevel = 100
@@ -595,6 +783,11 @@ CreateThread(function()
                     oxygenLevel = math.floor(staminaPercent)
                     showOxygen = true
                 end
+            end
+
+            -- Bar disabled in config: never ask the UI to show it
+            if not Config.StatusBars.oxygen.enabled then
+                showOxygen = false
             end
             
             -- Framework-specific status fetching
@@ -675,7 +868,8 @@ CreateThread(function()
 end)
 
 -- Seatbelt system - CLIENT-SIDE ONLY (each player manages their own seatbelt)
-local seatbeltOn = false
+-- NOTE: seatbeltOn is declared at the top of the file so the vehicle menu and
+-- this system share one state instead of two shadowed copies.
 local lastSpeed = 0
 local seatbeltAlarmPlaying = false
 local lastSeatbeltState = false
@@ -730,8 +924,8 @@ if Config.Seatbelt.enabled then
     RegisterKeyMapping('seatbelt', 'Toggle Seatbelt', 'keyboard', Config.Seatbelt.key)
 end
 
--- Boat Anchor System
-local boatAnchorActive = false
+-- Boat Anchor System (state lives at the top of the file - the keybind and the
+-- F4 menu used to toggle two different variables)
 
 -- Aircraft altitude tracking for vertical speed calculation
 local lastAltitude = nil
@@ -744,23 +938,27 @@ local function IsVehicleBoat(vehicle)
     return vehicleClass == 14 -- 14 = Boats
 end
 
--- Function to toggle boat anchor
+-- Function to toggle boat anchor (shared by the keybind and the F4 menu)
 local function ToggleBoatAnchor()
     local ped = PlayerPedId()
     local vehicle = GetVehiclePedIsIn(ped, false)
-    
+
     if vehicle == 0 then return end
     if not IsVehicleBoat(vehicle) then return end
     if GetPedInVehicleSeat(vehicle, -1) ~= ped then return end -- Driver only
-    
+
     boatAnchorActive = not boatAnchorActive
-    
+
     if boatAnchorActive then
         -- Anchor down - reduce speed but don't freeze
+        anchoredVehicle = vehicle
         SetVehicleForwardSpeed(vehicle, 0.0)
+        SetVehicleInteriorlight(vehicle, true)
         ShowCustomNotification('success', 'Anchor', '⚓ Anchor dropped')
     else
         -- Anchor up
+        anchoredVehicle = nil
+        SetVehicleInteriorlight(vehicle, false)
         ShowCustomNotification('success', 'Anchor', '⚓ Anchor raised')
     end
 end
@@ -903,7 +1101,10 @@ CreateThread(function()
             local doorOpen = GetVehicleDoorAngleRatio(vehicle, 0) > 0.0 -- Door 0 is driver door
             
             -- Calculate odometer (simplified - would need persistent storage for real odometer)
-            local odometer = math.floor(GetVehicleEstimatedMaxSpeed(vehicle) * 1000)
+            local odometer = 0
+            if Config.VehicleHUD.showOdometer then
+                odometer = math.floor(GetVehicleEstimatedMaxSpeed(vehicle) * 1000)
+            end
             
             -- Apply anchor physics for boats
             if isBoat and boatAnchorActive then
@@ -1014,6 +1215,12 @@ CreateThread(function()
                 
                 -- Get compass heading
                 compassHeading = math.floor(GetEntityHeading(vehicle) + 0.5)
+
+                -- Config.DistanceMeasurement: convert the metre-based readouts to feet
+                if Config.DistanceMeasurement == 'feet' then
+                    waveHeight = math.floor(waveHeight * 3.28084 * 10 + 0.5) / 10
+                    waterDepth = math.floor(waterDepth * 3.28084 + 0.5)
+                end
             else
                 -- Reset boat data when not in boat
                 waveHeight = 0
@@ -1257,13 +1464,20 @@ CreateThread(function()
             direction = 'NW'
         end
         
+        -- Compass visibility: always shown in a vehicle, on foot it follows
+        -- Config.Minimap.showCompassOnFoot
+        local compassVisible = IsInVehicle() or Config.Minimap.showCompassOnFoot == true
+
         SendNUIMessage({
             action = 'updateLocation',
             data = {
                 data = {
-                    street = streetName,
-                    zone = zoneName,
-                    direction = direction
+                    street = Config.Minimap.showStreetName and streetName or '',
+                    zone = Config.Minimap.showZoneName and zoneName or '',
+                    direction = direction,
+                    visible = compassVisible,
+                    -- Lets the UI shift the compass down when the radar is hidden
+                    minimapVisible = minimapVisible == true
                 }
             }
         })
@@ -1352,9 +1566,12 @@ end
 -- Voice Indicator with speaking detection and radio support (PMA-Voice State Bags)
 -- Voice system - Optimized
 CreateThread(function()
+    -- Component disabled in config: don't even run the thread
+    if not Config.ShowComponents.voiceOrRadio then return end
+
     while true do
         Wait(200) -- Update every 200ms (reduced from 100ms)
-        
+
         local voiceMode = 2 -- default normal (1=whisper, 2=normal, 3=shout)
         local isTalking = false
         local radioChannel = 0
@@ -1431,6 +1648,12 @@ CreateThread(function()
             voiceMode = 2
         end
         
+        -- Config.Voice.showRadioChannel = false hides the radio readout entirely
+        if not Config.Voice.showRadioChannel then
+            radioChannel = 0
+            radioTalking = false
+        end
+
         -- Send voice data to NUI
         local voicePayload = {
             mode = voiceMode,           -- Voice range: 1=whisper, 2=normal, 3=shout
@@ -1455,9 +1678,12 @@ end)
 
 -- Time Display with config option
 CreateThread(function()
+    -- Component disabled in config: don't even run the thread
+    if not Config.ShowComponents.time then return end
+
     while true do
         Wait(1000)
-        
+
         local timeString = ''
         
         if Config.HUD.useRealTime then
@@ -1509,16 +1735,17 @@ CreateThread(function()
 end)
 
 -- Toggle HUD (Config.ToggleHudCommand)
-if Config.ToggleHudCommand and Config.HUD.enabled then
+-- Registered even when Config.HUD.enabled is false: that option controls the
+-- STARTING state, so the command must still exist to bring the HUD back.
+if Config.ToggleHudCommand then
     RegisterCommand(Config.ToggleHudCommand, function()
         hudActive = not hudActive
         SendNUIMessage({ action = 'setVisible', data = { visible = hudActive } })
-        
-        -- Also toggle minimap visibility for full cinematic mode
-        if Config.Minimap.enabled then
-            DisplayRadar(hudActive)
-        end
-        
+
+        -- Radar follows the cinematic toggle through the central manager,
+        -- which still respects showOnFoot / hideInVehicle when re-enabled
+        ApplyMinimapVisibility(true)
+
         if hudActive then
             ShowCustomNotification('success', 'HUD', 'HUD enabled')
         else
@@ -1527,42 +1754,32 @@ if Config.ToggleHudCommand and Config.HUD.enabled then
     end)
 end
 
--- Hide HUD in pause menu
-CreateThread(function()
-    while true do
-        Wait(500)
-        if IsPauseMenuActive() and Config.HUD.hideInPauseMenu then
-            SendNUIMessage({ action = 'setVisible', data = { visible = false } })
-        elseif hudActive then
-            SendNUIMessage({ action = 'setVisible', data = { visible = true } })
-        end
-    end
-end)
+-- HUD visibility in the pause menu / in vehicles is handled by the
+-- "HUD / MINIMAP VISIBILITY MANAGER" thread above.
 
--- Hide default FiveM HUD (health/armor bars)
--- Hide default HUD - Optimized
+-- Hide default FiveM HUD components.
+-- HideHudComponentThisFrame only lasts ONE frame, so this must run every frame -
+-- the old Wait(1000) version left the vanilla components visible.
+local HIDDEN_HUD_COMPONENTS = {
+    1,  -- Wanted Stars
+    2,  -- Weapon Icon
+    3,  -- Cash
+    4,  -- MP Cash
+    6,  -- Vehicle Name
+    7,  -- Area Name
+    8,  -- Vehicle Class
+    9,  -- Street Name
+    13, -- Cash Change
+    17, -- Save Game
+    20  -- Weapon Stats
+}
+
 CreateThread(function()
     while true do
-        Wait(1000) -- Check every second instead of every frame
-        
-        -- Hide all default HUD components
-        HideHudComponentThisFrame(1)  -- Wanted Stars
-        HideHudComponentThisFrame(2)  -- Weapon Icon
-        HideHudComponentThisFrame(3)  -- Cash
-        HideHudComponentThisFrame(4)  -- MP Cash
-        HideHudComponentThisFrame(6)  -- Vehicle Name
-        HideHudComponentThisFrame(7)  -- Area Name
-        HideHudComponentThisFrame(8)  -- Vehicle Class
-        HideHudComponentThisFrame(9)  -- Street Name
-        HideHudComponentThisFrame(13) -- Cash Change
-        HideHudComponentThisFrame(17) -- Save Game
-        HideHudComponentThisFrame(20) -- Weapon Stats
-        
-        -- CRITICAL: Hide default health/armor bars
-        HideHudComponentThisFrame(3)  -- MP Cash
-        HideHudComponentThisFrame(4)  -- MP Message
-        HideHudComponentThisFrame(7)  -- Area Name
-        HideHudComponentThisFrame(9)  -- Street Name
+        Wait(0)
+        for i = 1, #HIDDEN_HUD_COMPONENTS do
+            HideHudComponentThisFrame(HIDDEN_HUD_COMPONENTS[i])
+        end
     end
 end)
 
@@ -1601,9 +1818,9 @@ if Config.Minimap.enabled then
         AddReplaceTexture("platform:/textures/graphics", "radarmask1g_circular", "minimap_layout", "radarmasksm-circular")
         if Config.Debug then print('[HUD] Pre-loaded: radarmasksm-circular') end
         
-        -- Enable radar
-        DisplayRadar(true)
-        
+        -- Hand radar visibility back to the manager (respects showOnFoot etc.)
+        ApplyMinimapVisibility(true)
+
         if Config.Debug then print('[HUD] Minimap initialized with all textures pre-loaded (default: ' .. Config.Minimap.shape .. ')') end
     end)
 end
@@ -1658,9 +1875,37 @@ MinimapLayouts.rounded = {
     minimap_blur = { -0.0355, -0.022, 0.267, 0.272 },   -- Moved DOWN (Y: -0.042 to -0.022)
 }
 
--- Current minimap style (will be loaded from saved settings, NO DEFAULT)
-local currentMinimapStyle = nil
-local minimapStyleLoaded = false
+-- 'circular' was accepted by ApplyMinimapTexture and by the UI but had no layout
+-- entry, which made the layout thread index a nil table every tick.
+MinimapLayouts.circular = {
+    minimap = { -0.0095, -0.060, 0.15, 0.188888 },
+    minimap_mask = { -0.005, -0.072, 0.12, 0.2 },
+    minimap_blur = { -0.0355, -0.022, 0.267, 0.272 },
+}
+
+-- Config.Minimap.size is expressed in pixels against a 200px reference.
+-- Scale the width/height of every scaleform component by that ratio.
+local MINIMAP_BASE_SIZE = 200.0
+
+local function GetMinimapSizeScale()
+    local size = tonumber(Config.Minimap.size) or MINIMAP_BASE_SIZE
+    if size <= 0 then size = MINIMAP_BASE_SIZE end
+    return size / MINIMAP_BASE_SIZE
+end
+
+-- Returns a copy of the layout with the configured size applied
+local function GetScaledLayout(style)
+    local base = MinimapLayouts[style] or MinimapLayouts.rounded
+    local scale = GetMinimapSizeScale()
+
+    if scale == 1.0 then return base end
+
+    return {
+        minimap      = { base.minimap[1],      base.minimap[2],      base.minimap[3]      * scale, base.minimap[4]      * scale },
+        minimap_mask = { base.minimap_mask[1], base.minimap_mask[2], base.minimap_mask[3] * scale, base.minimap_mask[4] * scale },
+        minimap_blur = { base.minimap_blur[1], base.minimap_blur[2], base.minimap_blur[3] * scale, base.minimap_blur[4] * scale }
+    }
+end
 
 -- Custom minimap position (from edit mode)
 local customMinimapPosition = nil
@@ -1693,139 +1938,297 @@ local function GetMinimapAnchor()
     return Minimap
 end
 
--- Convert pixel drag delta to scaleform delta.
--- Uses the anchor-derived ratio: if scaleform sizeX=0.15 produces anchor.width screen fraction,
--- then dScaleform = dScreenFraction * (0.15 / anchor.width)
-local function PixelDeltaToScaleform(dPixelX, dPixelY)
-    local screenWidth, screenHeight = GetActiveScreenResolution()
-    local anchor = GetMinimapAnchor()
-    local anchorW = math.max(anchor.width, 0.0001)
-    local anchorH = math.max(anchor.height, 0.0001)
-    local scaleX = 0.15   / anchorW   -- scaleform units per screen-fraction X
-    local scaleY = 0.1889 / anchorH   -- scaleform units per screen-fraction Y
-    local dx = (dPixelX  / screenWidth)  * scaleX
-    local dy = (dPixelY / screenHeight) * scaleY
-    return dx, dy
+--[[
+    SCALEFORM COORDINATE MODEL
+    --------------------------
+    SetMinimapComponentPosition(name, 'L', 'B', posX, posY, sizeX, sizeY)
+
+      * Anchored to the LEFT edge and the BOTTOM edge of the safe zone.
+      * posX grows to the RIGHT -> same direction as screen X.
+      * posY grows DOWNWARDS    -> SAME direction as screen/CSS Y.
+        Proof: the stock layout uses posY = -0.060 and the minimap renders
+        ABOVE the safe-zone bottom, so negative = up, positive = down.
+        (An earlier build assumed the opposite and inverted the drag.)
+      * The anchor is the bottom edge, so the component's BOTTOM-LEFT corner is
+        the stable reference: sizing changes the top edge, never the bottom.
+
+    Unit calibration: the stock layout uses sizeX 0.15 / sizeY 0.188888 and the
+    minimap renders at exactly anchor.width x anchor.height of the screen, so
+      screen_fraction = scaleform_units * (anchor_size / REF_SIZE)
+--]]
+local MINIMAP_REF_SIZE_X = 0.15
+local MINIMAP_REF_SIZE_Y = 0.188888
+
+-- Vertical direction of the scaleform Y axis relative to the screen.
+--  1.0 = posY grows downward (correct for 'B' aligned minimap components)
+-- -1.0 = posY grows upward
+-- This is the ONLY place the vertical direction is decided.
+local MINIMAP_Y_AXIS = 1.0
+
+-- Screen fraction covered by one scaleform unit, on each axis
+local function GetMinimapUnits(anchor)
+    return anchor.width  / MINIMAP_REF_SIZE_X,
+           anchor.height / MINIMAP_REF_SIZE_Y
 end
 
--- Apply a pixel drag delta to all three minimap layout components.
-local function ApplyMinimapDelta(layout, dPixelX, dPixelY)
-    local dx, dy = PixelDeltaToScaleform(dPixelX, dPixelY)
-    SetMinimapComponentPosition('minimap',      'L', 'B',
-        layout.minimap[1]      + dx, layout.minimap[2]      + dy, layout.minimap[3],      layout.minimap[4])
+-- scaleform component values -> on-screen rect (0.0-1.0 fractions)
+local function ScaleformToScreen(anchor, posX, posY, sizeX, sizeY)
+    local ux, uy = GetMinimapUnits(anchor)
+    local width  = sizeX * ux
+    local height = sizeY * uy
+    local bottom = (anchor.y + anchor.height) + (posY * uy * MINIMAP_Y_AXIS)
+    local left   = anchor.x + (posX * ux)
+    return { x = left, y = bottom - height, width = width, height = height }
+end
+
+-- on-screen rect (0.0-1.0 fractions) -> scaleform component values.
+-- Exact inverse of ScaleformToScreen, so a rect that was never touched maps
+-- straight back onto the values it came from (no jump on the first drag).
+local function ScreenToScaleform(anchor, rect)
+    local ux, uy = GetMinimapUnits(anchor)
+    ux = (ux ~= 0) and ux or 0.0001
+    uy = (uy ~= 0) and uy or 0.0001
+
+    local sizeX  = rect.width  / ux
+    local sizeY  = rect.height / uy
+    local posX   = (rect.x - anchor.x) / ux
+    local bottom = rect.y + rect.height
+    local posY   = ((bottom - (anchor.y + anchor.height)) / uy) * MINIMAP_Y_AXIS
+
+    return posX, posY, sizeX, sizeY
+end
+
+--[[
+    Place the minimap at an absolute on-screen rect.
+
+    The map component is set directly from the rect. The mask and blur keep
+    their original relationship to the map (they are the frame/backdrop art),
+    so they get the same positional offset and the same size ratio.
+--]]
+local function ApplyMinimapRect(baseLayout, anchor, rect)
+    local posX, posY, sizeX, sizeY = ScreenToScaleform(anchor, rect)
+
+    -- Clamp the size so a bad payload cannot blow the map up
+    local scaleX = math.max(0.25, math.min(3.0, sizeX / baseLayout.minimap[3]))
+    local scaleY = math.max(0.25, math.min(3.0, sizeY / baseLayout.minimap[4]))
+    sizeX = baseLayout.minimap[3] * scaleX
+    sizeY = baseLayout.minimap[4] * scaleY
+
+    local dPosX = posX - baseLayout.minimap[1]
+    local dPosY = posY - baseLayout.minimap[2]
+
+    SetMinimapComponentPosition('minimap', 'L', 'B', posX, posY, sizeX, sizeY)
+
     SetMinimapComponentPosition('minimap_mask', 'L', 'B',
-        layout.minimap_mask[1] + dx, layout.minimap_mask[2] + dy, layout.minimap_mask[3], layout.minimap_mask[4])
+        baseLayout.minimap_mask[1] + dPosX, baseLayout.minimap_mask[2] + dPosY,
+        baseLayout.minimap_mask[3] * scaleX, baseLayout.minimap_mask[4] * scaleY)
+
     SetMinimapComponentPosition('minimap_blur', 'L', 'B',
-        layout.minimap_blur[1] + dx, layout.minimap_blur[2] + dy, layout.minimap_blur[3], layout.minimap_blur[4])
+        baseLayout.minimap_blur[1] + dPosX, baseLayout.minimap_blur[2] + dPosY,
+        baseLayout.minimap_blur[3] * scaleX, baseLayout.minimap_blur[4] * scaleY)
+
+    return posX, posY, sizeX, sizeY
 end
 
--- Minimap positioning and configuration
+-- The rect the minimap should currently occupy, in 0.0-1.0 screen fractions.
+-- Custom (dragged) position wins, otherwise the config-sized default layout.
+local function GetCurrentMinimapRect()
+    local anchor = GetMinimapAnchor()
+
+    if customMinimapPosition then
+        return {
+            x      = customMinimapPosition.fracX,
+            y      = customMinimapPosition.fracY,
+            width  = customMinimapPosition.fracW,
+            height = customMinimapPosition.fracH
+        }, anchor
+    end
+
+    local layout = GetScaledLayout(currentMinimapStyle)
+    return ScaleformToScreen(anchor,
+        layout.minimap[1], layout.minimap[2], layout.minimap[3], layout.minimap[4]), anchor
+end
+
+-- Push the current rect into the three scaleform components.
+-- Cheap enough to run every frame, which is what keeps the game from quietly
+-- resetting the layout after a bigmap toggle, a pause, or a vehicle change.
+function ApplyCurrentMinimapLayout()
+    if not Config.Minimap.enabled then return end
+
+    local baseLayout = MinimapLayouts[currentMinimapStyle] or MinimapLayouts.rounded
+
+    if customMinimapPosition then
+        local rect, anchor = GetCurrentMinimapRect()
+        ApplyMinimapRect(baseLayout, anchor, rect)
+    else
+        local layout = GetScaledLayout(currentMinimapStyle)
+        SetMinimapComponentPosition('minimap',      'L', 'B', layout.minimap[1],      layout.minimap[2],      layout.minimap[3],      layout.minimap[4])
+        SetMinimapComponentPosition('minimap_mask', 'L', 'B', layout.minimap_mask[1], layout.minimap_mask[2], layout.minimap_mask[3], layout.minimap_mask[4])
+        SetMinimapComponentPosition('minimap_blur', 'L', 'B', layout.minimap_blur[1], layout.minimap_blur[2], layout.minimap_blur[3], layout.minimap_blur[4])
+    end
+end
+
+--[[
+    Force the radar to rebuild its projection.
+
+    Moving the components repositions the map bitmap, but the blip layer (player
+    pin, waypoint, all blips) keeps projecting onto the OLD rect until the radar
+    re-lays out. A bigmap toggle triggers that rebuild - but the new rect has to
+    be in place BEFORE the toggle, and re-applied after it, because the toggle
+    resets the component positions. Getting that order wrong is what left the
+    blips behind at the previous position.
+--]]
+function ForceMinimapRelayout()
+    if not Config.Minimap.enabled then return end
+
+    ApplyCurrentMinimapLayout()      -- 1. new rect in place first
+
+    SetRadarBigmapEnabled(true, false)
+    Wait(0)
+    SetRadarBigmapEnabled(false, false)
+    Wait(0)
+
+    ApplyCurrentMinimapLayout()      -- 2. re-apply, the toggle wiped it
+    Wait(0)
+    ApplyCurrentMinimapLayout()      -- 3. once more after the radar settles
+
+    ApplyMinimapVisibility(true)
+end
+
+--[[
+    Normalise whatever the UI sent into resolution-independent fractions.
+    Preferred payload carries fracX/fracY/fracW/fracH (0.0-1.0 of the NUI
+    viewport). Pixel-only payloads from older UI builds are converted using the
+    screen size the UI reported, falling back to the game resolution.
+--]]
+local function NormaliseMinimapPayload(data)
+    if not data then return nil end
+
+    local screenW, screenH = GetActiveScreenResolution()
+    local uiW = tonumber(data.screenWidth)  or screenW
+    local uiH = tonumber(data.screenHeight) or screenH
+    if uiW <= 0 then uiW = screenW end
+    if uiH <= 0 then uiH = screenH end
+
+    local anchor = GetMinimapAnchor()
+
+    local fracX = tonumber(data.fracX)
+    local fracY = tonumber(data.fracY)
+    local fracW = tonumber(data.fracW)
+    local fracH = tonumber(data.fracH)
+
+    if not fracX and tonumber(data.x) then fracX = tonumber(data.x) / uiW end
+    if not fracY and tonumber(data.y) then fracY = tonumber(data.y) / uiH end
+    if not fracW and tonumber(data.width)  then fracW = tonumber(data.width)  / uiW end
+    if not fracH and tonumber(data.height) then fracH = tonumber(data.height) / uiH end
+
+    if not fracX or not fracY then return nil end
+
+    -- Size defaults to the rendered minimap size (stock size x Config.Minimap.size),
+    -- matching what BuildAnchorData hands to the UI
+    local sizeScale = GetMinimapSizeScale()
+    if not fracW or fracW <= 0 then fracW = anchor.width  * sizeScale end
+    if not fracH or fracH <= 0 then fracH = anchor.height * sizeScale end
+
+    return { fracX = fracX, fracY = fracY, fracW = fracW, fracH = fracH }
+end
+
+-- ============================================
+-- MINIMAP LAYOUT THREADS
+-- ============================================
+-- The component positions are re-applied EVERY FRAME. The game resets them on
+-- bigmap toggles, pause-menu exits, vehicle changes and respawns; anything less
+-- frequent lets the map and the blip layer drift apart.
 CreateThread(function()
-    -- WAIT for minimap style to be loaded before starting
-    -- print('[HUD] Waiting for minimap style to load...')
+    -- Wait for the minimap style to be resolved before touching the layout
     local timeout = 0
     while not minimapStyleLoaded and timeout < 50 do
         Wait(100)
         timeout = timeout + 1
     end
-    
-    -- If still not loaded, use rounded as fallback
+
     if not currentMinimapStyle then
-        currentMinimapStyle = 'rounded'
-        -- print('[HUD] Minimap style not loaded in time, using fallback: rounded')
-    else
-        -- print('[HUD] Minimap style loaded: ' .. currentMinimapStyle)
+        currentMinimapStyle = Config.Minimap.shape or 'rounded'
     end
-    
+
     while true do
-        Wait(500) -- Check every 500ms instead of every frame
-        
-        -- Force disable bigmap
-        SetRadarBigmapEnabled(false, false)
-        DisplayRadar(true)
-        
-        -- Get current layout
-        local layout = MinimapLayouts[currentMinimapStyle]
-        
-        -- Set minimap clip type based on style
-        if currentMinimapStyle == 'circular' then
-            SetMinimapClipType(1)  -- Circular
-        elseif currentMinimapStyle == 'rounded' then
-            SetMinimapClipType(0)  -- Rounded corners
+        Wait(0)
+        if Config.Minimap.enabled then
+            ApplyCurrentMinimapLayout()
         else
-            SetMinimapClipType(2)  -- Square
+            Wait(500)
         end
-        
-        -- Use custom position if available, otherwise use default layout
-        if customMinimapPosition then
-            local px = customMinimapPosition.x
-            local py = customMinimapPosition.y
+    end
+end)
 
-            -- Compute drag delta vs the ACTUAL anchor position (proven formula)
-            local anchor = GetMinimapAnchor()
-            local screenW, screenH = GetActiveScreenResolution()
-            local defPixelX = math.floor(anchor.x * screenW + 0.5)
-            local defPixelY = math.floor(anchor.y * screenH + 0.5)
+-- Slower housekeeping: clip type, zoom, bigmap and the north blip
+CreateThread(function()
+    local lastStyle = nil
 
-            local dPixelX = px - defPixelX
-            local dPixelY = py - defPixelY
+    while true do
+        Wait(500)
 
-            ApplyMinimapDelta(layout, dPixelX, dPixelY)
+        if Config.Minimap.enabled then
+            -- Keep the bigmap off (radar visibility itself is owned by the
+            -- visibility manager so showOnFoot / hideInVehicle stick)
+            SetRadarBigmapEnabled(false, false)
 
-            local key = px .. ',' .. py
-            if lastAppliedMinimapKey ~= key then
-                lastAppliedMinimapKey = key
-                print(string.format('[HUD] Minimap: card(%d,%d) anchor(%d,%d) delta(%d,%d) res(%dx%d)',
-                    px, py, defPixelX, defPixelY, dPixelX, dPixelY, screenW, screenH))
+            -- Clip type follows the style
+            if currentMinimapStyle == 'circular' then
+                SetMinimapClipType(1)  -- Circular
+            elseif currentMinimapStyle == 'rounded' then
+                SetMinimapClipType(0)  -- Rounded corners
+            else
+                SetMinimapClipType(2)  -- Square
             end
-        else
-            -- Position minimap components with default layout
-            SetMinimapComponentPosition('minimap',      'L', 'B', layout.minimap[1],      layout.minimap[2],      layout.minimap[3],      layout.minimap[4])
-            SetMinimapComponentPosition('minimap_mask', 'L', 'B', layout.minimap_mask[1], layout.minimap_mask[2], layout.minimap_mask[3], layout.minimap_mask[4])
-            SetMinimapComponentPosition('minimap_blur', 'L', 'B', layout.minimap_blur[1], layout.minimap_blur[2], layout.minimap_blur[3], layout.minimap_blur[4])
-            lastAppliedMinimapKey = nil
-        end
-        
-        -- Zoom level
-        SetRadarZoom(1100)
-        
-        -- Hide north blip
-        local northBlip = GetNorthRadarBlip()
-        if northBlip ~= 0 then
-            SetBlipAlpha(northBlip, 0)
+
+            -- A style change also changes the mask, so rebuild the projection
+            if lastStyle ~= nil and lastStyle ~= currentMinimapStyle then
+                ForceMinimapRelayout()
+            end
+            lastStyle = currentMinimapStyle
+
+            SetRadarZoom(1100)
+
+            -- North blip follows Config.Minimap.showNorthBlip
+            local northBlip = GetNorthRadarBlip()
+            if northBlip ~= 0 then
+                SetBlipAlpha(northBlip, Config.Minimap.showNorthBlip and 255 or 0)
+            end
         end
     end
 end)
 
 -- NUI Callback to update minimap position from edit mode
 RegisterNUICallback('updateMinimapPosition', function(data, cb)
-    print('[HUD] >> updateMinimapPosition NUI callback received: ' .. json.encode(data or {}))
-    if data and data.x ~= nil and data.y ~= nil then
-        local anchor = GetMinimapAnchor()
-        local screenW, screenH = GetActiveScreenResolution()
-        local defW = math.floor(anchor.width  * screenW + 0.5)
-        local defH = math.floor(anchor.height * screenH + 0.5)
-        customMinimapPosition = {
-            x      = data.x + 0.0,
-            y      = data.y + 0.0,
-            width  = (data.width  or defW) + 0.0,
-            height = (data.height or defH) + 0.0
-        }
-        
-        print(string.format('[HUD] customMinimapPosition set: x=%.1f y=%.1f w=%.1f h=%.1f',
-            customMinimapPosition.x, customMinimapPosition.y, customMinimapPosition.width, customMinimapPosition.height))
-        
-        -- Reload the minimap so blips and map update to the new position
-        RefreshMinimap()
-        
-        -- Save to server for persistence
+    if Config.Debug then
+        print('[HUD] >> updateMinimapPosition: ' .. json.encode(data or {}))
+    end
+
+    local pos = NormaliseMinimapPayload(data)
+
+    if pos then
+        customMinimapPosition = pos
+        lastAppliedMinimapKey = nil
+
+        if Config.Debug then
+            print(string.format('[HUD] customMinimapPosition set: frac x=%.4f y=%.4f w=%.4f h=%.4f',
+                pos.fracX, pos.fracY, pos.fracW, pos.fracH))
+        end
+
+        -- Rebuild the radar projection so the map, the player pin, the waypoint
+        -- and every blip all land on the NEW rect. Runs in its own thread
+        -- because it has to yield between the bigmap toggle steps.
+        CreateThread(ForceMinimapRelayout)
+
+        -- Save to server for persistence (fractions are resolution-independent)
         TriggerServerEvent('hud:saveMinimapPosition', {
-            x      = customMinimapPosition.x,
-            y      = customMinimapPosition.y,
-            width  = customMinimapPosition.width,
-            height = customMinimapPosition.height
+            fracX = pos.fracX,
+            fracY = pos.fracY,
+            fracW = pos.fracW,
+            fracH = pos.fracH
         })
-        
+
         cb({ status = 'ok' })
     else
         print('[HUD] ERROR: updateMinimapPosition received invalid data')
@@ -1839,46 +2242,50 @@ RegisterNUICallback('resetMinimapPosition', function(data, cb)
     lastAppliedMinimapKey = nil
     -- Tell server to clear saved position so it won't restore on next login
     TriggerServerEvent('hud:clearMinimapPosition')
+    -- Rebuild so blips snap back with the map
+    CreateThread(ForceMinimapRelayout)
     print('[HUD] Minimap position reset to default layout')
     cb('ok')
 end)
 
--- Receive minimap position from server (nil means use default layout)
+-- Receive minimap position from server (nil means use default layout).
+-- Accepts both the new fraction payload and legacy pixel rows.
 RegisterNetEvent('hud:receiveMinimapPosition')
 AddEventHandler('hud:receiveMinimapPosition', function(position)
-    if position and position.x ~= nil and position.y ~= nil then
-        local anchor = GetMinimapAnchor()
-        local screenW, screenH = GetActiveScreenResolution()
-        local defW = math.floor(anchor.width  * screenW + 0.5)
-        local defH = math.floor(anchor.height * screenH + 0.5)
-        customMinimapPosition = {
-            x      = position.x + 0.0,
-            y      = position.y + 0.0,
-            width  = (position.width  or defW) + 0.0,
-            height = (position.height or defH) + 0.0
-        }
-        print(string.format('[HUD] Minimap position loaded from server: x=%.1f y=%.1f w=%.1f h=%.1f',
-            customMinimapPosition.x, customMinimapPosition.y,
-            customMinimapPosition.width, customMinimapPosition.height))
+    local pos = NormaliseMinimapPayload(position)
+
+    if pos then
+        customMinimapPosition = pos
+        lastAppliedMinimapKey = nil
+        if Config.Debug then
+            print(string.format('[HUD] Minimap position loaded from server: frac x=%.4f y=%.4f w=%.4f h=%.4f',
+                pos.fracX, pos.fracY, pos.fracW, pos.fracH))
+        end
     else
-        -- No saved position - use default layout (don't set customMinimapPosition)
+        -- No saved position - use default layout
         customMinimapPosition = nil
-        print('[HUD] No saved minimap position - using default layout')
+        lastAppliedMinimapKey = nil
+        if Config.Debug then print('[HUD] No saved minimap position - using default layout') end
     end
+
+    -- Blips must be projected onto the restored rect, not the default one
+    CreateThread(ForceMinimapRelayout)
 end)
 
 -- NUI Callback to change minimap style from web UI
 RegisterNUICallback('updateMinimapStyle', function(data, cb)
-    if data and data.minimapStyle and MinimapLayouts[data.minimapStyle] then
+    if data and data.minimapStyle and MinimapLayouts[data.minimapStyle] and Config.Minimap.enabled then
         currentMinimapStyle = data.minimapStyle
-        -- print('[HUD] Minimap style changed to: ' .. currentMinimapStyle)
-        
-        -- Apply the texture immediately
+
+        -- Apply the texture immediately (this player only)
         ApplyMinimapTexture(data.minimapStyle)
-        
-        -- Trigger server event to broadcast to all clients
-        TriggerServerEvent('hud:updateMinimapStyle', data.minimapStyle)
-        
+
+        -- NOTE: this used to TriggerServerEvent('hud:updateMinimapStyle') which
+        -- the server rebroadcast to -1, so ONE player picking a style in their
+        -- own edit menu changed the minimap for EVERY player online.
+        -- The style is a personal setting (stored in that player's localStorage),
+        -- so it stays local. The server event still exists for admin/global use.
+
         cb('ok')
     else
         -- print('[HUD] Invalid minimap style')
@@ -1898,36 +2305,66 @@ AddEventHandler('hud:updateMinimapStyle', function(minimapStyle)
     end
 end)
 
--- Helper to build minimap anchor data for NUI messages
+--[[
+    Rect handed to the UI when an edit mode opens.
+
+    This is the rect the minimap is ACTUALLY rendered at right now - the base
+    layout offsets and Config.Minimap.size included, or the player's saved
+    custom rect if they have one. The old version reported the raw safe-zone
+    anchor, which ignored the script's own base layout (-0.0095, -0.060) and so
+    drew the card ~17px left and ~60px above the real map.
+
+    Because ScreenToScaleform is the exact inverse of ScaleformToScreen, a card
+    that is opened and closed untouched maps back to identical values - the map
+    cannot drift just from opening the editor.
+--]]
 local function BuildAnchorData()
-    local anchor = GetMinimapAnchor()
+    local rect = GetCurrentMinimapRect()
     return {
-        x      = anchor.x,
-        y      = anchor.y,
-        width  = anchor.width,
-        height = anchor.height
+        x      = rect.x,
+        y      = rect.y,
+        width  = rect.width,
+        height = rect.height
     }
 end
 
 -- Command to change minimap style
 RegisterCommand('minimapstyle', function(source, args)
+    if not Config.Minimap.enabled then
+        ShowCustomNotification('error', 'Minimap', 'Minimap is disabled in config')
+        return
+    end
+
     if args[1] and MinimapLayouts[args[1]] then
         currentMinimapStyle = args[1]
         print('[HUD] Minimap style changed to: ' .. currentMinimapStyle)
-        
+
         -- Apply the texture immediately
         ApplyMinimapTexture(args[1])
     else
-        -- print('[HUD] Usage: /minimapstyle [square|rounded|circular]')
-        -- print('[HUD] Current style: ' .. currentMinimapStyle)
+        ShowCustomNotification('info', 'Minimap',
+            'Usage: /minimapstyle [square|rounded|circular] - current: ' .. tostring(currentMinimapStyle))
     end
 end, false)
 
--- Command to toggle minimap
+-- Command to toggle minimap (player override on top of the config rules)
 RegisterCommand('toggleminimap', function()
-    local isVisible = IsRadarEnabled()
-    DisplayRadar(not isVisible)
-    print('[HUD] Minimap ' .. (not isVisible and 'enabled' or 'disabled'))
+    if not Config.Minimap.enabled then
+        ShowCustomNotification('error', 'Minimap', 'Minimap is disabled in config')
+        return
+    end
+
+    minimapUserToggle = not minimapUserToggle
+    local shown = ApplyMinimapVisibility(true)
+
+    if minimapUserToggle and not shown then
+        -- Enabled by the player but still hidden by a config rule
+        ShowCustomNotification('info', 'Minimap',
+            IsInVehicle() and 'Minimap hidden in vehicles by config'
+                           or 'Minimap hidden on foot by config (Config.Minimap.showOnFoot)')
+    else
+        print('[HUD] Minimap ' .. (minimapUserToggle and 'enabled' or 'disabled'))
+    end
 end, false)
 
 -- Debug command to reset minimap
@@ -1935,10 +2372,10 @@ RegisterCommand('minimapreset', function()
     print('[HUD] Resetting minimap...')
     DisplayRadar(false)
     Wait(100)
-    DisplayRadar(true)
     SetRadarBigmapEnabled(true, false)
     Wait(50)
     SetRadarBigmapEnabled(false, false)
+    ApplyMinimapVisibility(true) -- restore whatever config asks for
     print('[HUD] Minimap reset complete')
 end, false)
 
@@ -2072,14 +2509,20 @@ RegisterNUICallback('closePlayerInfoPositioning', function(data, cb)
 end)
 
 -- NUI Callback to set minimap style from web UI on startup
+-- Validated against MinimapLayouts: an unknown style used to leave the layout
+-- thread indexing a nil table.
 RegisterNUICallback('setMinimapStyle', function(data, cb)
-    if data and data.minimapStyle then
+    if data and data.minimapStyle and MinimapLayouts[data.minimapStyle] and Config.Minimap.enabled then
         currentMinimapStyle = data.minimapStyle
         minimapStyleLoaded = true
-       -- print('[HUD] Minimap style set from NUI: ' .. currentMinimapStyle)
         ApplyMinimapTexture(currentMinimapStyle)
+        cb('ok')
+        return
     end
-    cb('ok')
+
+    -- Invalid / disabled: keep the config default
+    minimapStyleLoaded = true
+    cb('ignored')
 end)
 
 -- Receive settings from server (not used - settings are in localStorage)
@@ -2168,9 +2611,12 @@ local WeaponData = {
 -- Thread to track weapon changes and ammo - INSTANT UPDATES
 -- Weapon display - Optimized
 CreateThread(function()
+    -- Component disabled in config: don't even run the thread
+    if not Config.ShowComponents.weapon then return end
+
     while true do
         Wait(100) -- Update every 100ms instead of every frame
-        
+
         local ped = PlayerPedId()
         local weaponHash = GetSelectedPedWeapon(ped)
         
@@ -2341,9 +2787,7 @@ local vehicleState = {
     seats = {}
 }
 
--- Boat anchor state
-local boatAnchorActive = false
-local anchoredVehicle = nil
+-- Boat anchor state is shared (declared at the top of the file)
 
 -- Function to check if player is driver
 local function IsPlayerDriver()
@@ -2959,6 +3403,7 @@ AddEventHandler('notify:test', function(notificationType, title, message, durati
     local validTypes = {
         success = true,
         error = true,
+        warning = true,
         info = true
     }
     

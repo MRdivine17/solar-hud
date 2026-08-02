@@ -3,7 +3,9 @@ import * as React from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faHeart, faShield, faBurger, faBottleWater, faLungs, faBrain } from '@fortawesome/free-solid-svg-icons'
 import { HUDData, HUDSettings, StatusBarSettings } from '../types'
-import { getPositionFromBottom, applyResponsivePosition } from '../utils/responsive'
+import { getPositionFromBottom } from '../utils/responsive'
+import { readPosition, writePosition, DEFAULT_LAYOUT } from '../utils/layout'
+import { useViewport } from '../hooks/useViewport'
 import './StatusBars.css'
 
 interface StatusBarsProps {
@@ -49,17 +51,23 @@ const StatusBarCard = memo(({
   // Get layout-specific position key
   const positionKey = `${barId}_${layoutKey}`
   
-  // Get position from settings or use default
+  // Resolve the stored design-space record against the live viewport.
+  // Size comes back scaled too, so icons grow on 4K and shrink on 720p
+  // instead of staying locked at their 1080p pixel size.
+  // The per-layout key (health_progressOutline_fullyRounded) is not in
+  // DEFAULT_LAYOUT, so the icon's shipped record is the fallback. Falling back
+  // to a raw pixel default here would pin every icon to the bottom edge.
   const uiPositions = hudSettings?.uiPositions as any
-  const savedPosition = uiPositions?.[positionKey] || defaultPosition
-  
-  // Get saved size or use default
-  const savedSize = savedPosition.width && savedPosition.height 
-    ? { width: savedPosition.width, height: savedPosition.height }
-    : { width, height }
-  
-  // Apply responsive positioning - converts to current viewport
-  const responsivePosition = applyResponsivePosition(savedPosition)
+  const vp = useViewport()
+  const savedPosition = readPosition(
+    uiPositions,
+    positionKey,
+    vp,
+    DEFAULT_LAYOUT[`${barId}Icon`] ?? {
+      v: 2, anchor: 'BL', dx: defaultPosition.x / vp.s, dy: 254, w: width, h: height
+    }
+  )
+  const savedSize = { width: savedPosition.width || width, height: savedPosition.height || height }
 
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (!positioningMode || !hudSettings) return
@@ -161,16 +169,18 @@ const StatusBarCard = memo(({
       const finalWidth = rect.width
       const finalHeight = rect.height
       
+      // Merge onto the LATEST saved settings, never onto the prop: the prop can
+      // carry config.lua overrides (bars/cards force-hidden server-side) which
+      // must never be written into the player's own saved settings.
+      const rawSaved = localStorage.getItem('hudSettings')
+      const baseSettings = rawSaved ? JSON.parse(rawSaved) : hudSettings
+
       const updatedSettings = {
-        ...hudSettings,
+        ...baseSettings,
         uiPositions: {
-          ...(hudSettings.uiPositions || {}),
-          [positionKey]: {
-            x: finalX,
-            y: finalY,
-            width: finalWidth,
-            height: finalHeight
-          }
+          ...(baseSettings.uiPositions || {}),
+          // stored resolution-independently (design space + anchor)
+          [positionKey]: writePosition(containerRef.current, vp, positionKey)
         }
       }
       
@@ -210,14 +220,14 @@ const StatusBarCard = memo(({
       ref={containerRef}
       style={{
         position: 'absolute',
-        left: `${responsivePosition.x}px`,
-        top: `${responsivePosition.y}px`,
+        left: `${savedPosition.left}px`,
+        top: `${savedPosition.top}px`,
         width: `${savedSize.width}px`,
         height: `${savedSize.height}px`,
         cursor: positioningMode ? (isResizing ? 'nwse-resize' : 'move') : 'default',
-        outline: positioningMode ? '3px solid rgba(59, 130, 246, 0.8)' : 'none',
+        outline: positioningMode ? '1px dashed rgba(245, 165, 36, 0.65)' : 'none',
         outlineOffset: '3px',
-        boxShadow: positioningMode ? '0 0 20px rgba(59, 130, 246, 0.5)' : 'none',
+        boxShadow: positioningMode ? '0 0 0 1px rgba(0,0,0,0.5), 0 0 26px -6px rgba(245, 165, 36, 0.45)' : 'none',
         pointerEvents: positioningMode ? 'auto' : 'none',
         touchAction: 'none',
         zIndex: positioningMode ? 10000 : 'auto',
@@ -240,8 +250,8 @@ const StatusBarCard = memo(({
             right: '-6px',
             width: '16px',
             height: '16px',
-            background: '#3b82f6',
-            border: '2px solid #ffffff',
+            background: '#f5a524',
+            border: '2px solid #07080a',
             borderRadius: '50%',
             cursor: 'nwse-resize',
             zIndex: 10001,

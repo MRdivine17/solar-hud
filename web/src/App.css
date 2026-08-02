@@ -1,3 +1,64 @@
+/* ============================================================================
+   POSITIONING MODE BANNER
+   Shown while HUD elements are draggable. Matches the settings-panel console
+   language: graphite chip, hairline border, signal amber, mono type.
+   ========================================================================= */
+.positioning-banner {
+  position: fixed;
+  top: 22px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  pointer-events: none;
+  background: linear-gradient(180deg, #101319, #07080a);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 18px 44px -18px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  font-family: var(--hud-font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: #e9ebef;
+  animation: pb-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pb-in {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to   { opacity: 1; transform: translateX(-50%); }
+}
+
+.positioning-banner-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f5a524;
+  box-shadow: 0 0 10px rgba(245, 165, 36, 0.6);
+  animation: pb-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes pb-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+
+.positioning-banner-sep {
+  color: rgba(245, 165, 36, 0.55);
+  font-weight: 400;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .positioning-banner,
+  .positioning-banner-dot { animation: none; }
+}
+
 .hud-container {
   width: 100vw;
   height: 100vh;

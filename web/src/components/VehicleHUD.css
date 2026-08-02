@@ -1,6 +1,13 @@
+/* Positioning anchor - placed from uiPositions.vehicleHud, exactly like the
+   other HUD elements. Defaults to the top-left corner. */
+.vehicle-hud-anchor {
+  position: absolute;
+  transition: none;
+}
+
 /* Vehicle Speedometer - Square Design - FULLY RESPONSIVE */
 .vehicle-speedometer {
-  position: fixed;
+  position: relative;
   width: clamp(10rem, 13.75vw, 15rem);
   background: rgba(255, 255, 255, 0.95);
   clip-path: polygon(

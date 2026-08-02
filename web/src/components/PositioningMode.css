@@ -1,301 +1,494 @@
-/* Positioning Mode Overlay */
+/* ============================================================================
+   SOLAR HUD - EDIT / POSITIONING MODE
+   Same avionics console language as the settings panel: graphite, hairlines,
+   signal amber, mono micro-labels, corner brackets on the live target.
+   ========================================================================= */
+
 .positioning-mode-overlay {
+  --ink-0: #07080a;
+  --ink-1: #0b0d11;
+  --ink-2: #101319;
+  --ink-4: #1d222c;
+
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.12);
+  --line-3: rgba(255, 255, 255, 0.2);
+
+  --text: #e9ebef;
+  --text-dim: #99a0ac;
+  --text-mute: #646b78;
+
+  --amber: #f5a524;
+  --amber-bright: #ffc355;
+  --amber-dim: rgba(245, 165, 36, 0.5);
+  --amber-wash: rgba(245, 165, 36, 0.1);
+  --amber-glow: rgba(245, 165, 36, 0.35);
+  --danger: #e5484d;
+
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(0, 0, 20, 0.3);
-  backdrop-filter: blur(2px);
+  font-family: var(--hud-font);
+  background:
+    radial-gradient(90% 70% at 50% 50%, transparent 0%, rgba(0, 0, 0, 0.55) 100%);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  animation: pm-in 200ms ease-out;
 }
 
-/* Grid Background */
+@keyframes pm-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ---- grid + guides ------------------------------------------------------ */
 .positioning-grid {
   position: absolute;
   inset: 0;
   pointer-events: none;
   z-index: 1;
+  mask-image: radial-gradient(120% 100% at 50% 50%, #000 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(120% 100% at 50% 50%, #000 40%, transparent 100%);
 }
 
-/* Safezone Border */
 .safezone-border {
   pointer-events: none;
   z-index: 2;
+  border-color: var(--amber-dim) !important;
+  border-style: dashed !important;
+  border-width: 1px !important;
+  border-radius: 4px;
+  box-shadow: inset 0 0 60px -30px var(--amber-glow);
 }
 
-/* Anchor Zones (corners) */
 .anchor-zone {
   position: absolute;
-  width: 100px;
-  height: 100px;
-  border: 2px dashed rgba(100, 150, 200, 0.3);
+  width: 96px;
+  height: 96px;
+  border: 1px dashed rgba(245, 165, 36, 0.28);
   pointer-events: none;
   z-index: 2;
 }
 
-.anchor-top-left {
-  top: 0;
-  left: 0;
-  border-right: none;
-  border-bottom: none;
-}
+.anchor-top-left     { top: 0; left: 0;     border-right: none; border-bottom: none; }
+.anchor-top-right    { top: 0; right: 0;    border-left: none;  border-bottom: none; }
+.anchor-bottom-left  { bottom: 0; left: 0;  border-right: none; border-top: none; }
+.anchor-bottom-right { bottom: 0; right: 0; border-left: none;  border-top: none; }
 
-.anchor-top-right {
-  top: 0;
-  right: 0;
-  border-left: none;
-  border-bottom: none;
-}
-
-.anchor-bottom-left {
-  bottom: 0;
-  left: 0;
-  border-right: none;
-  border-top: none;
-}
-
-.anchor-bottom-right {
-  bottom: 0;
-  right: 0;
-  border-left: none;
-  border-top: none;
-}
-
-/* Control Panel - Centered */
+/* ============================================================================
+   CONTROL PANEL - docked bottom-left, out of the way of the HUD elements
+   ========================================================================= */
 .edit-mode-panel {
+  /* Centred: bottom-left sat on top of the minimap and compass, which are the
+     very things being repositioned. Dead centre keeps every screen edge clear. */
   position: absolute;
   top: 50%;
   left: 50%;
+  bottom: auto;
   transform: translate(-50%, -50%);
-  background: rgba(30, 40, 60, 0.95);
-  border: 2px solid rgba(100, 150, 200, 0.4);
-  border-radius: 12px;
-  padding: 24px;
-  min-width: 400px;
-  max-width: 500px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  width: 330px;
+  min-width: 0;
+  max-width: none;
+  padding: 0;
+  overflow: hidden;
   z-index: 10000;
-  backdrop-filter: blur(10px);
+  background: linear-gradient(180deg, var(--ink-2) 0%, var(--ink-1) 55%, var(--ink-0) 100%);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 30px 80px -20px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  animation: pm-panel-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes pm-panel-in {
+  from { opacity: 0; transform: translate(-50%, calc(-50% + 12px)); }
+  to   { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.edit-mode-panel::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber-dim), transparent);
+}
+
+/* ---- header ------------------------------------------------------------- */
+.edit-mode-header {
+  padding: 18px 20px 14px;
+  border-bottom: 1px solid var(--line);
 }
 
 .edit-mode-header h3 {
-  margin: 0 0 12px 0;
-  font-size: 20px;
-  font-weight: 600;
-  color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 9px;
+  font-family: var(--hud-font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+/* blinking rec-style dot in front of the title */
+.edit-mode-header h3::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber-glow);
+  animation: pm-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes pm-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
 }
 
 .edit-mode-header p {
   margin: 0;
-  font-size: 13px;
-  line-height: 1.6;
-  color: rgba(255, 255, 255, 0.7);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
 }
 
-/* Options */
+/* ---- options ------------------------------------------------------------ */
 .edit-mode-options {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  margin: 20px 0;
-  padding: 16px;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 12px;
+  background: transparent;
+  border-radius: 0;
+  border-bottom: 1px solid var(--line);
 }
 
 .edit-option {
   display: flex;
   align-items: center;
   gap: 10px;
+  padding: 7px 8px;
+  border-radius: 3px;
   cursor: pointer;
-  color: rgba(255, 255, 255, 0.9);
-  font-size: 14px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  transition: color 0.2s;
+  font-family: var(--hud-font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+  transition: color 140ms ease, background 140ms ease;
 }
 
 .edit-option:hover {
-  color: #ffffff;
+  color: var(--text);
+  background: rgba(255, 255, 255, 0.035);
 }
 
-.edit-option input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
+.edit-option input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--amber);
   cursor: pointer;
-  accent-color: #3b82f6;
 }
 
-/* Action Buttons */
+/* ---- buttons ------------------------------------------------------------ */
 .edit-mode-actions {
   display: flex;
-  gap: 10px;
-  margin-bottom: 16px;
+  gap: 8px;
+  margin: 0;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
 }
 
 .edit-btn {
   flex: 1;
-  padding: 10px 16px;
-  background: rgba(100, 150, 200, 0.2);
-  border: 1px solid rgba(100, 150, 200, 0.3);
-  border-radius: 6px;
-  color: #6496c8;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  gap: 7px;
+  height: 32px;
+  padding: 0 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  color: var(--text-dim);
+  font-family: var(--hud-font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 140ms ease;
 }
 
 .edit-btn:hover {
-  background: rgba(100, 150, 200, 0.3);
-  border-color: rgba(100, 150, 200, 0.5);
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--ink-0);
+  box-shadow: 0 0 18px -5px var(--amber-glow);
 }
 
-.edit-btn i {
-  font-size: 14px;
-}
+.edit-btn i { font-size: 12px; }
 
-/* Finish Buttons */
 .edit-mode-finish {
   display: flex;
   flex-direction: column;
   gap: 10px;
+  padding: 14px 12px 16px;
 }
 
 .edit-btn-finish {
   width: 100%;
-  padding: 14px 20px;
-  background: #3b82f6;
-  border: none;
-  border-radius: 8px;
-  color: #ffffff;
-  font-size: 15px;
-  font-weight: 600;
+  height: 38px;
+  background: var(--amber);
+  border: 1px solid var(--amber);
+  border-radius: 3px;
+  color: var(--ink-0);
+  font-family: var(--hud-font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 140ms ease;
 }
 
 .edit-btn-finish:hover {
-  background: #2563eb;
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  background: var(--amber-bright);
+  border-color: var(--amber-bright);
+  box-shadow: 0 0 24px -6px var(--amber-glow);
 }
 
 .edit-btn-discard {
   width: 100%;
-  padding: 10px 20px;
+  height: 32px;
   background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 13px;
-  font-weight: 500;
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  color: var(--text-mute);
+  font-family: var(--hud-font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  transition: all 140ms ease;
 }
 
 .edit-btn-discard:hover {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
+  background: rgba(229, 72, 77, 0.1);
+  border-color: rgba(229, 72, 77, 0.45);
+  color: #f08a8d;
 }
 
-/* Positioning Elements */
+/* ESC hint block inside the panel */
+.edit-mode-hint {
+  padding: 13px 12px;
+  text-align: center;
+  background: var(--amber-wash);
+  border: 1px solid var(--amber-dim);
+  border-radius: 4px;
+}
+
+.edit-mode-hint strong {
+  display: block;
+  margin-bottom: 4px;
+  font-family: var(--hud-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--amber-bright);
+}
+
+.edit-mode-hint span {
+  font-size: 10.5px;
+  color: var(--text-mute);
+}
+
+/* ============================================================================
+   DRAGGABLE TARGET
+   ========================================================================= */
 .positioning-element {
-  transition: opacity 0.2s, box-shadow 0.2s;
   user-select: none;
+  border: 1px dashed var(--amber-dim) !important;
+  border-radius: 4px !important;
+  background:
+    repeating-linear-gradient(45deg, rgba(245, 165, 36, 0.05) 0 8px, transparent 8px 16px),
+    rgba(245, 165, 36, 0.05) !important;
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.5), inset 0 0 40px -12px var(--amber-glow) !important;
+  transition: box-shadow 160ms ease, border-color 160ms ease;
+}
+
+.positioning-element:hover {
+  border-color: var(--amber) !important;
 }
 
 .positioning-element.dragging {
-  box-shadow: 0 8px 32px rgba(100, 150, 200, 0.4);
+  border-color: var(--amber) !important;
+  border-style: solid !important;
+  background:
+    repeating-linear-gradient(45deg, rgba(245, 165, 36, 0.1) 0 8px, transparent 8px 16px),
+    rgba(245, 165, 36, 0.12) !important;
+  box-shadow: 0 0 0 1px var(--amber-dim), 0 20px 50px -18px rgba(0, 0, 0, 0.9),
+              inset 0 0 60px -14px var(--amber-glow) !important;
   z-index: 1001 !important;
 }
 
-.positioning-element.hidden {
-  opacity: 0.3;
+/* corner brackets on the target */
+.positioning-element::before,
+.positioning-element::after {
+  content: '';
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--amber);
+  pointer-events: none;
 }
+.positioning-element::before { top: 5px; left: 5px; border-right: 0; border-bottom: 0; }
+.positioning-element::after  { bottom: 5px; right: 5px; border-left: 0; border-top: 0; }
 
-/* Element Controls */
+.positioning-element.hidden { opacity: 0.3; }
+
+/* label chip above the target */
 .element-controls {
   position: absolute;
-  top: -32px;
+  top: -30px;
   left: 0;
   right: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 6px 10px;
-  background: rgba(30, 40, 60, 0.95);
-  border: 1px solid rgba(100, 150, 200, 0.4);
-  border-radius: 6px 6px 0 0;
+  padding: 5px 9px;
+  background: var(--ink-1);
+  border: 1px solid var(--line-2);
+  border-bottom: 0;
+  border-radius: 4px 4px 0 0;
   backdrop-filter: blur(10px);
 }
 
 .element-label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #ffffff;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--hud-font-mono);
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  color: var(--amber);
 }
 
 .element-toggle-btn {
-  padding: 4px 8px;
-  background: rgba(100, 150, 200, 0.2);
-  border: 1px solid rgba(100, 150, 200, 0.3);
-  border-radius: 4px;
-  color: #6496c8;
+  display: grid;
+  place-items: center;
+  padding: 3px 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  color: var(--text-dim);
   cursor: pointer;
-  transition: all 0.2s;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+  transition: all 140ms ease;
 }
 
 .element-toggle-btn:hover {
-  background: rgba(100, 150, 200, 0.3);
-  border-color: rgba(100, 150, 200, 0.5);
+  background: var(--amber);
+  border-color: var(--amber);
+  color: var(--ink-0);
 }
 
-.element-toggle-btn i {
-  font-size: 14px;
-}
+.element-toggle-btn i { font-size: 12px; }
 
-/* Element Size Display */
+/* live dimension readout */
 .element-size {
   position: absolute;
-  bottom: -28px;
+  bottom: -26px;
   right: 0;
-  padding: 4px 10px;
-  background: rgba(30, 40, 60, 0.95);
-  border: 1px solid rgba(100, 150, 200, 0.4);
-  border-radius: 0 0 6px 6px;
-  font-size: 11px;
+  padding: 3px 9px;
+  background: var(--ink-1);
+  border: 1px solid var(--line-2);
+  border-top: 0;
+  border-radius: 0 0 4px 4px;
+  font-family: var(--hud-font-mono);
+  font-size: 10px;
   font-weight: 600;
-  color: #6496c8;
-  font-family: 'Courier New', monospace;
+  letter-spacing: 0.08em;
+  color: var(--amber);
   backdrop-filter: blur(10px);
 }
 
-/* Element Content */
 .element-content {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  border-radius: 4px;
+  border-radius: 3px;
 }
 
-/* Responsive */
+/* ---- minimap target internals ------------------------------------------- */
+.pm-target-glyph {
+  font-size: 34px;
+  line-height: 1;
+  opacity: 0.55;
+  filter: grayscale(1) brightness(1.6);
+}
+
+.pm-target-label {
+  font-family: var(--hud-font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: var(--amber);
+  text-shadow: 0 0 18px var(--amber-glow);
+}
+
+.pm-target-hint {
+  padding: 0 14px;
+  font-size: 10.5px;
+  line-height: 1.4;
+  text-align: center;
+  color: var(--text-mute);
+}
+
+/* the size chip sits on the card corner rather than in the flow */
+.pm-target-size {
+  position: absolute;
+  right: 0;
+  bottom: -26px;
+}
+
+/* resize grip */
+.positioning-resize-handle {
+  position: absolute;
+  right: -7px;
+  bottom: -7px;
+  width: 16px;
+  height: 16px;
+  background: var(--amber);
+  border: 2px solid var(--ink-0);
+  border-radius: 50%;
+  box-shadow: 0 0 0 1px var(--amber-dim), 0 0 14px -2px var(--amber-glow);
+  cursor: nwse-resize;
+  z-index: 1002;
+  transition: transform 140ms ease;
+}
+
+.positioning-resize-handle:hover { transform: scale(1.18); }
+
 @media (max-width: 768px) {
-  .edit-mode-panel {
-    min-width: 90%;
-    max-width: 90%;
-  }
+  /* stay centred on narrow screens too, just narrower */
+  .edit-mode-panel { width: min(330px, calc(100vw - 40px)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .positioning-mode-overlay,
+  .edit-mode-panel { animation: none; }
+  .edit-mode-header h3::before { animation: none; }
 }

@@ -4,6 +4,8 @@ import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
 import { faHashtag, faClock, faBriefcase, faMoneyBill, faUniversity, faSuitcase, faMicrophone, faMicrophoneSlash } from '@fortawesome/free-solid-svg-icons'
 import { PlayerInfo as PlayerInfoType, MoneyData, TimeData, VoiceData, PlayerInfoSettings } from '../types'
 import { getPositionFromRight } from '../utils/responsive'
+import { readPosition, writePosition } from '../utils/layout'
+import { useViewport } from '../hooks/useViewport'
 import './PlayerInfo.css'
 
 interface PlayerInfoProps {
@@ -14,6 +16,12 @@ interface PlayerInfoProps {
   settings?: PlayerInfoSettings
   positioningMode?: boolean
   hudSettings?: any
+  /** Config.Currency */
+  currency?: string
+  /** Config.NumberFormat (BCP-47 tag, e.g. "en-US") */
+  numberFormat?: string
+  /** Config.Voice.showWaveAnimation */
+  showVoiceWaveAnimation?: boolean
 }
 
 // Helper functions
@@ -24,8 +32,13 @@ const GetParentResourceName = () => {
   return (window as any).GetParentResourceName ? (window as any).GetParentResourceName() : 'solar-hud'
 }
 
-const formatMoney = (amount: number) => {
-  return amount.toLocaleString('en-US')
+// Config.NumberFormat drives the grouping/decimal separators
+const formatMoney = (amount: number, numberFormat: string = 'en-US') => {
+  try {
+    return amount.toLocaleString(numberFormat)
+  } catch {
+    return amount.toLocaleString('en-US')
+  }
 }
 
 const hexToRgba = (hex: string, alpha: number) => {
@@ -64,8 +77,14 @@ const PlayerInfoCard = memo(({
   // Get layout-specific position key
   const positionKey = `${cardId}_${layoutStyle}`
   
-  // Get position from settings or use default
-  const savedPosition = hudSettings?.uiPositions?.[positionKey] || defaultPosition
+  // Resolve the stored design-space record against the live viewport
+  const vp = useViewport()
+  // defaultPosition arrives in scaled pixels; the fallback record is design
+  // space, so divide it back out. Normally unused - every card key ships in
+  // DEFAULT_LAYOUT - but it must still be in the right units.
+  const savedPosition = readPosition(hudSettings?.uiPositions, positionKey, vp, {
+    v: 2, anchor: 'TR', dx: 200, dy: defaultPosition.y / vp.s, w: width, h: height
+  })
   
   // Get current scale from playerInfo settings
   const currentScale = hudSettings?.playerInfo?.scale || 100
@@ -118,16 +137,18 @@ const PlayerInfoCard = memo(({
       const finalX = rect.left
       const finalY = rect.top
       
+      // Merge onto the LATEST saved settings, never onto the prop: the prop can
+      // carry config.lua overrides (bars/cards force-hidden server-side) which
+      // must never be written into the player's own saved settings.
+      const rawSaved = localStorage.getItem('hudSettings')
+      const baseSettings = rawSaved ? JSON.parse(rawSaved) : hudSettings
+
       const updatedSettings = {
-        ...hudSettings,
+        ...baseSettings,
         uiPositions: {
-          ...(hudSettings.uiPositions || {}),
-          [positionKey]: {
-            x: finalX,
-            y: finalY,
-            width: width,
-            height: height
-          }
+          ...(baseSettings.uiPositions || {}),
+          // stored resolution-independently (design space + anchor)
+          [positionKey]: writePosition(containerRef.current, vp, positionKey)
         }
       }
       
@@ -234,12 +255,12 @@ const PlayerInfoCard = memo(({
       ref={containerRef}
       style={{
         position: 'absolute',
-        left: `${savedPosition.x}px`,
-        top: `${savedPosition.y}px`,
+        left: `${savedPosition.left}px`,
+        top: `${savedPosition.top}px`,
         cursor: positioningMode ? 'move' : 'default',
-        outline: positioningMode ? '3px solid rgba(59, 130, 246, 0.8)' : 'none',
+        outline: positioningMode ? '1px dashed rgba(245, 165, 36, 0.65)' : 'none',
         outlineOffset: '3px',
-        boxShadow: positioningMode ? '0 0 20px rgba(59, 130, 246, 0.5)' : 'none',
+        boxShadow: positioningMode ? '0 0 0 1px rgba(0,0,0,0.5), 0 0 26px -6px rgba(245, 165, 36, 0.45)' : 'none',
         pointerEvents: positioningMode ? 'auto' : 'none',
         touchAction: 'none',
         zIndex: positioningMode ? 10000 : 'auto',
@@ -260,7 +281,7 @@ const PlayerInfoCard = memo(({
             right: '-6px',
             width: '20px',
             height: '20px',
-            background: 'rgba(59, 130, 246, 0.9)',
+            background: '#f5a524',
             border: '2px solid white',
             borderRadius: '50%',
             cursor: 'nwse-resize',
@@ -339,7 +360,20 @@ const SpeakingAnimation = memo(({ talking, color = '#00ff00' }: { talking: boole
   )
 })
 
-const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioningMode, hudSettings }: PlayerInfoProps) => {
+const PlayerInfo = memo(({
+  playerInfo,
+  money,
+  time,
+  voice,
+  settings,
+  positioningMode,
+  hudSettings,
+  currency = '$',
+  numberFormat = 'en-US',
+  showVoiceWaveAnimation = true
+}: PlayerInfoProps) => {
+  // Currency symbol + locale formatting, both from config.lua
+  const fmt = (amount: number) => `${currency}${formatMoney(amount, numberFormat)}`
   // Default settings
   const defaultColors = {
     iconColor: '#ffffff',
@@ -484,7 +518,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
           >
             <div className="mov-card-row" style={{ transform: `scale(${scale})`, transformOrigin: 'top right' }}>
               <div className="mov-info-rect" style={{ background: hexToRgba(safeSettings.bankColors.bgColor, bgOpacity), ...cardStyleProps }}>
-                <span className="mov-info-value" style={{ color: safeSettings.bankColors.textColor }}>${formatMoney(money.bank)}</span>
+                <span className="mov-info-value" style={{ color: safeSettings.bankColors.textColor }}>{fmt(money.bank)}</span>
                 <span className="mov-info-label" style={{ color: safeSettings.bankColors.labelColor }}>Bank</span>
               </div>
               <div className="mov-icon-square" style={{ background: hexToRgba(safeSettings.bankColors.iconBgColor || safeSettings.iconBgColor, bgOpacity), ...cardStyleProps }}>
@@ -507,7 +541,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
           >
             <div className="mov-card-row" style={{ transform: `scale(${scale})`, transformOrigin: 'top right' }}>
               <div className="mov-info-rect" style={{ background: hexToRgba(safeSettings.cashColors.bgColor, bgOpacity), ...cardStyleProps }}>
-                <span className="mov-info-value" style={{ color: safeSettings.cashColors.textColor }}>${formatMoney(money.cash)}</span>
+                <span className="mov-info-value" style={{ color: safeSettings.cashColors.textColor }}>{fmt(money.cash)}</span>
                 <span className="mov-info-label" style={{ color: safeSettings.cashColors.labelColor }}>Cash</span>
               </div>
               <div className="mov-icon-square" style={{ background: hexToRgba(safeSettings.cashColors.iconBgColor || safeSettings.iconBgColor, bgOpacity), ...cardStyleProps }}>
@@ -530,7 +564,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
           >
             <div className="mov-card-row" style={{ transform: `scale(${scale})`, transformOrigin: 'top right' }}>
               <div className="mov-info-rect" style={{ background: hexToRgba(safeSettings.dirtyColors.bgColor, bgOpacity), ...cardStyleProps }}>
-                <span className="mov-info-value" style={{ color: safeSettings.dirtyColors.textColor }}>${formatMoney(money.dirty)}</span>
+                <span className="mov-info-value" style={{ color: safeSettings.dirtyColors.textColor }}>{fmt(money.dirty)}</span>
                 <span className="mov-info-label" style={{ color: safeSettings.dirtyColors.labelColor }}>Dirty</span>
               </div>
               <div className="mov-icon-square" style={{ background: hexToRgba(safeSettings.dirtyColors.iconBgColor || safeSettings.iconBgColor, bgOpacity), ...cardStyleProps }}>
@@ -601,7 +635,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
               
               {/* Speaking Animation */}
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '50px' }}>
-                {(voice.talking || voice.radioTalking) ? (
+                {(showVoiceWaveAnimation && (voice.talking || voice.radioTalking)) ? (
                   <SpeakingAnimation talking={true} color={safeSettings.voiceColors.iconColor} />
                 ) : (
                   <div style={{ width: '50px', height: '2px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '1px' }} />
@@ -689,7 +723,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
             <div className="grid-info-card" style={{ background: hexToRgba(safeSettings.bankColors.bgColor, bgOpacity), ...cardStyleProps, transform: `scale(${scale})`, transformOrigin: 'top right' }}>
               <div className="grid-card-accent" style={{ background: safeSettings.bankColors.iconColor }}></div>
               <FontAwesomeIcon icon={faUniversity} style={{ color: safeSettings.bankColors.iconColor }} />
-              <span style={{ color: safeSettings.bankColors.textColor }}>BANK: ${formatMoney(money.bank)}</span>
+              <span style={{ color: safeSettings.bankColors.textColor }}>BANK: {fmt(money.bank)}</span>
             </div>
           </PlayerInfoCard>
         )}
@@ -708,7 +742,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
             <div className="grid-info-card" style={{ background: hexToRgba(safeSettings.cashColors.bgColor, bgOpacity), ...cardStyleProps, transform: `scale(${scale})`, transformOrigin: 'top right' }}>
               <div className="grid-card-accent" style={{ background: safeSettings.cashColors.iconColor }}></div>
               <FontAwesomeIcon icon={faMoneyBill} style={{ color: safeSettings.cashColors.iconColor }} />
-              <span style={{ color: safeSettings.cashColors.textColor }}>CASH: ${formatMoney(money.cash)}</span>
+              <span style={{ color: safeSettings.cashColors.textColor }}>CASH: {fmt(money.cash)}</span>
             </div>
           </PlayerInfoCard>
         )}
@@ -727,7 +761,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
             <div className="grid-info-card" style={{ background: hexToRgba(safeSettings.dirtyColors.bgColor, bgOpacity), ...cardStyleProps, transform: `scale(${scale})`, transformOrigin: 'top right' }}>
               <div className="grid-card-accent" style={{ background: safeSettings.dirtyColors.iconColor }}></div>
               <FontAwesomeIcon icon={faSuitcase} style={{ color: safeSettings.dirtyColors.iconColor }} />
-              <span style={{ color: safeSettings.dirtyColors.textColor }}>DIRTY: ${formatMoney(money.dirty)}</span>
+              <span style={{ color: safeSettings.dirtyColors.textColor }}>DIRTY: {fmt(money.dirty)}</span>
             </div>
           </PlayerInfoCard>
         )}
@@ -793,7 +827,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
               
               {/* Speaking Animation */}
               <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '40px' }}>
-                {(voice.talking || voice.radioTalking) ? (
+                {(showVoiceWaveAnimation && (voice.talking || voice.radioTalking)) ? (
                   <div style={{ transform: 'scale(0.9)' }}>
                     <SpeakingAnimation talking={true} color={safeSettings.voiceColors.iconColor} />
                   </div>
@@ -920,7 +954,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
           >
             <FontAwesomeIcon icon={faUniversity} style={{ color: safeSettings.bankColors.iconColor, fontSize: '12px' }} />
             <span style={{ color: safeSettings.bankColors.textColor, fontSize: '12px', fontWeight: '600' }}>
-              ${formatMoney(money.bank)}
+              {fmt(money.bank)}
             </span>
           </div>
         </PlayerInfoCard>
@@ -952,7 +986,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
           >
             <FontAwesomeIcon icon={faMoneyBill} style={{ color: safeSettings.cashColors.iconColor, fontSize: '12px' }} />
             <span style={{ color: safeSettings.cashColors.textColor, fontSize: '12px', fontWeight: '600' }}>
-              ${formatMoney(money.cash)}
+              {fmt(money.cash)}
             </span>
           </div>
         </PlayerInfoCard>
@@ -984,7 +1018,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
           >
             <FontAwesomeIcon icon={faSuitcase} style={{ color: safeSettings.dirtyColors.iconColor, fontSize: '12px' }} />
             <span style={{ color: safeSettings.dirtyColors.textColor, fontSize: '12px', fontWeight: '600' }}>
-              ${formatMoney(money.dirty)}
+              {fmt(money.dirty)}
             </span>
           </div>
         </PlayerInfoCard>
@@ -1065,7 +1099,7 @@ const PlayerInfo = memo(({ playerInfo, money, time, voice, settings, positioning
             
             {/* Speaking Animation */}
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', minWidth: '30px' }}>
-              {(voice.talking || voice.radioTalking) ? (
+              {(showVoiceWaveAnimation && (voice.talking || voice.radioTalking)) ? (
                 <div style={{ transform: 'scale(0.7)' }}>
                   <SpeakingAnimation talking={true} color={safeSettings.voiceColors.iconColor} />
                 </div>

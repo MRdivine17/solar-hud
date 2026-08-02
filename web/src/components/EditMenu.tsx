@@ -12,6 +12,7 @@ import { faUniversity } from '@fortawesome/free-solid-svg-icons/faUniversity'
 import { faBriefcase } from '@fortawesome/free-solid-svg-icons/faBriefcase'
 import { faClock } from '@fortawesome/free-solid-svg-icons/faClock'
 import { faHashtag } from '@fortawesome/free-solid-svg-icons/faHashtag'
+import Dropdown from './Dropdown'
 
 interface EditMenuProps {
   isOpen: boolean
@@ -47,7 +48,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
     textColor: '#ffffff',
     labelColor: '#999999',
     bgColor: '#0a0a0a',
-    iconBgColor: '#1a1a1a'
+    iconBgColor: 'var(--ink-0)'
   }
   
   const basePlayerInfoSettings = currentSettings.playerInfo || {
@@ -56,7 +57,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
     cardStyle: 'rounded',
     themeMode: 'dark',
     bgColor: '#000000',
-    iconBgColor: '#1a1a1a',
+    iconBgColor: 'var(--ink-0)',
     contentBgColor: '#0a0a0a',
     transparency: 85,
     position: { x: 12, y: 12 },
@@ -560,13 +561,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
               <FontAwesomeIcon icon={faGear} />
               <span>HUD SETTINGS</span>
               {isSaving && (
-                <span style={{ 
-                  marginLeft: '12px', 
-                  fontSize: '13px', 
-                  color: '#fbbf24', 
-                  fontWeight: 'normal',
-                  animation: 'pulse 1.5s ease-in-out infinite'
-                }}>
+                <span className="saving-pill">
                   ● Saving...
                 </span>
               )}
@@ -608,34 +603,43 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
           <div className="edit-controls">
             <div className="control-group">
               <label>Style</label>
-              <select value={style} onChange={(e) => updateStyle(e.target.value as any)}>
-                <option value="progressOutline">Progress Outline</option>
-                <option value="progressFill">Progress Fill</option>
-                <option value="percentages">Percentages</option>
-                <option value="progressBar">Progress Bar</option>
-              </select>
+              <Dropdown
+                value={style}
+                options={[
+                  { value: 'progressOutline', label: 'Progress Outline' },
+                  { value: 'progressFill', label: 'Progress Fill' },
+                  { value: 'percentages', label: 'Percentages' },
+                  { value: 'progressBar', label: 'Progress Bar' }
+                ]}
+                onChange={(v) => updateStyle(v as any)}
+              />
             </div>
             <div className="control-group">
               <label>Border Radius</label>
-              <select value={borderRadius} onChange={(e) => updateBorderRadius(e.target.value as any)}>
-                <option value="fullyRounded">Fully Rounded</option>
-                <option value="slightlyRounded">Slightly Rounded</option>
-                <option value="square">Square</option>
-              </select>
+              <Dropdown
+                value={borderRadius}
+                options={[
+                  { value: 'fullyRounded', label: 'Fully Rounded' },
+                  { value: 'slightlyRounded', label: 'Slightly Rounded' },
+                  { value: 'square', label: 'Square' }
+                ]}
+                onChange={(v) => updateBorderRadius(v as any)}
+              />
             </div>
             <div className="control-group">
               <label>Speed Unit</label>
-              <select 
-                value={currentSettings.speedUnit || 'kmh'} 
-                onChange={(e) => {
-                  const newSettings = { ...currentSettings, speedUnit: e.target.value as 'kmh' | 'mph' }
+              <Dropdown
+                value={currentSettings.speedUnit || 'kmh'}
+                options={[
+                  { value: 'kmh', label: 'Kilometers (KMH)' },
+                  { value: 'mph', label: 'Miles (MPH)' }
+                ]}
+                onChange={(v) => {
+                  const newSettings = { ...currentSettings, speedUnit: v as 'kmh' | 'mph' }
                   setCurrentSettings(newSettings)
                   onSave(newSettings)
                 }}
-              >
-                <option value="kmh">Kilometers (KMH)</option>
-                <option value="mph">Miles (MPH)</option>
-              </select>
+              />
             </div>
           </div>
 
@@ -651,8 +655,10 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
 
               return (
                 <div key={status.key} className="status-card">
+                  {/* Card header: live preview + which bar this is */}
+                  <div className="status-card-head">
                   <div className="preview-icon-container">
-                    <svg width="60" height="60" style={{ position: 'absolute' }}>
+                    <svg viewBox="0 0 60 60" width="60" height="60">
                       {/* Background circle */}
                       <circle
                         cx="30"
@@ -688,7 +694,12 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       <FontAwesomeIcon icon={status.icon} style={{ color: statusSettings.iconColor }} />
                     </div>
                   </div>
-                  
+                    <div className="status-card-title">
+                      <span className="status-card-name">{status.label}</span>
+                      <span className="status-card-sub">Status bar</span>
+                    </div>
+                  </div>
+
                   {/* Visibility Slider - Dual Handle */}
                   <div className="visibility-section">
                     <label>Visible between</label>
@@ -898,13 +909,6 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     setCurrentSettings(newSettings)
                     onSave(newSettings)
                   }}
-                  style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    padding: '12px',
-                    minHeight: '180px'
-                  }}
                 >
                   <img 
                     src="../img/vehicle-hud/vehicle-hud1.png" 
@@ -913,17 +917,10 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       console.error('[EditMenu] Failed to load vehicle-hud1.png from ../img/vehicle-hud/')
                       e.currentTarget.style.display = 'none'
                     }}
-                    style={{ 
-                      width: '100%', 
-                      height: '120px', 
-                      objectFit: 'contain', 
-                      marginBottom: '8px',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(100, 150, 200, 0.1)'
-                    }} 
+                    className="style-preview-img" 
                   />
-                  <span style={{ fontWeight: '600' }}>Default HUD</span>
-                  <small style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'center' }}>Classic speedometer layout</small>
+                  <span className="style-btn-label">Default HUD</span>
+                  <small className="style-btn-caption">Classic speedometer layout</small>
                 </button>
                 <button 
                   className={`style-btn ${currentSettings.vehicleHudStyle === 'circular' ? 'active' : ''}`}
@@ -931,13 +928,6 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     const newSettings = { ...currentSettings, vehicleHudStyle: 'circular' as const }
                     setCurrentSettings(newSettings)
                     onSave(newSettings)
-                  }}
-                  style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    padding: '12px',
-                    minHeight: '180px'
                   }}
                 >
                   <img 
@@ -947,17 +937,10 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       console.error('[EditMenu] Failed to load vehicle-hud2.png from ../img/vehicle-hud/')
                       e.currentTarget.style.display = 'none'
                     }}
-                    style={{ 
-                      width: '100%', 
-                      height: '120px', 
-                      objectFit: 'contain', 
-                      marginBottom: '8px',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(100, 150, 200, 0.1)'
-                    }} 
+                    className="style-preview-img" 
                   />
-                  <span style={{ fontWeight: '600' }}>Circular HUD</span>
-                  <small style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'center' }}>Modern circular speedometer</small>
+                  <span className="style-btn-label">Circular HUD</span>
+                  <small className="style-btn-caption">Modern circular speedometer</small>
                 </button>
                 <button 
                   className={`style-btn ${currentSettings.vehicleHudStyle === 'style3' ? 'active' : ''}`}
@@ -965,13 +948,6 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     const newSettings = { ...currentSettings, vehicleHudStyle: 'style3' as const }
                     setCurrentSettings(newSettings)
                     onSave(newSettings)
-                  }}
-                  style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    padding: '12px',
-                    minHeight: '180px'
                   }}
                 >
                   <img 
@@ -981,17 +957,10 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       console.error('[EditMenu] Failed to load vehicle-hud3.png from ../img/vehicle-hud/')
                       e.currentTarget.style.display = 'none'
                     }}
-                    style={{ 
-                      width: '100%', 
-                      height: '120px', 
-                      objectFit: 'contain', 
-                      marginBottom: '8px',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(100, 150, 200, 0.1)'
-                    }} 
+                    className="style-preview-img" 
                   />
-                  <span style={{ fontWeight: '600' }}>Style 3 HUD</span>
-                  <small style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'center' }}>Horizontal bar speedometer</small>
+                  <span className="style-btn-label">Style 3 HUD</span>
+                  <small className="style-btn-caption">Horizontal bar speedometer</small>
                 </button>
                 <button 
                   className={`style-btn ${currentSettings.vehicleHudStyle === 'style4' ? 'active' : ''}`}
@@ -999,13 +968,6 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     const newSettings = { ...currentSettings, vehicleHudStyle: 'style4' as const }
                     setCurrentSettings(newSettings)
                     onSave(newSettings)
-                  }}
-                  style={{ 
-                    display: 'flex', 
-                    flexDirection: 'column', 
-                    alignItems: 'center', 
-                    padding: '12px',
-                    minHeight: '180px'
                   }}
                 >
                   <img 
@@ -1015,21 +977,14 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       console.error('[EditMenu] Failed to load vehicle-hud4.png from ../img/vehicle-hud/')
                       e.currentTarget.style.display = 'none'
                     }}
-                    style={{ 
-                      width: '100%', 
-                      height: '120px', 
-                      objectFit: 'contain', 
-                      marginBottom: '8px',
-                      borderRadius: '4px',
-                      backgroundColor: 'rgba(100, 150, 200, 0.1)'
-                    }} 
+                    className="style-preview-img" 
                   />
-                  <span style={{ fontWeight: '600' }}>Style 4 HUD</span>
-                  <small style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'center' }}>Circular gauge with RPM stick</small>
+                  <span className="style-btn-label">Style 4 HUD</span>
+                  <small className="style-btn-caption">Circular gauge with RPM stick</small>
                 </button>
               </div>
             </div>
-            
+
             <div style={{ padding: '20px', textAlign: 'center', color: '#666', marginTop: '20px' }}>
               <p>More vehicle HUD customization options coming soon...</p>
             </div>
@@ -1076,13 +1031,6 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       setCurrentSettings(newSettings)
                       onSave(newSettings)
                     }}
-                    style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      padding: '12px',
-                      minHeight: '180px'
-                    }}
                   >
                     <img 
                       src="../img/vehicle-hud/boat-hud1.png" 
@@ -1091,17 +1039,10 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         console.error('[EditMenu] Failed to load boat-hud1.png from ../img/vehicle-hud/')
                         e.currentTarget.style.display = 'none'
                       }}
-                      style={{ 
-                        width: '100%', 
-                        height: '120px', 
-                        objectFit: 'contain', 
-                        marginBottom: '8px',
-                        borderRadius: '4px',
-                        backgroundColor: 'rgba(0, 150, 200, 0.1)'
-                      }} 
+                      className="style-preview-img" 
                     />
-                    <span style={{ fontWeight: '600' }}>Boat HUD 1</span>
-                    <small style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'center' }}>Circular gauges with status bar</small>
+                    <span className="style-btn-label">Boat HUD 1</span>
+                    <small className="style-btn-caption">Circular gauges with status bar</small>
                   </button>
                   <button 
                     className={`style-btn ${currentSettings.boatHudStyle === 'boat2' ? 'active' : ''}`}
@@ -1109,13 +1050,6 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       const newSettings = { ...currentSettings, boatHudStyle: 'boat2' as const }
                       setCurrentSettings(newSettings)
                       onSave(newSettings)
-                    }}
-                    style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      padding: '12px',
-                      minHeight: '180px'
                     }}
                   >
                     <img 
@@ -1125,17 +1059,10 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         console.error('[EditMenu] Failed to load boat-hud2.png from ../img/vehicle-hud/')
                         e.currentTarget.style.display = 'none'
                       }}
-                      style={{ 
-                        width: '100%', 
-                        height: '120px', 
-                        objectFit: 'contain', 
-                        marginBottom: '8px',
-                        borderRadius: '4px',
-                        backgroundColor: 'rgba(0, 150, 200, 0.1)'
-                      }} 
+                      className="style-preview-img" 
                     />
-                    <span style={{ fontWeight: '600' }}>Boat HUD 2</span>
-                    <small style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'center' }}>Horizontal bars with direction card</small>
+                    <span className="style-btn-label">Boat HUD 2</span>
+                    <small className="style-btn-caption">Horizontal bars with direction card</small>
                   </button>
                   <button 
                     className={`style-btn ${currentSettings.boatHudStyle === 'boat3' ? 'active' : ''}`}
@@ -1143,13 +1070,6 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       const newSettings = { ...currentSettings, boatHudStyle: 'boat3' as const }
                       setCurrentSettings(newSettings)
                       onSave(newSettings)
-                    }}
-                    style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      padding: '12px',
-                      minHeight: '180px'
                     }}
                   >
                     <img 
@@ -1159,17 +1079,10 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         console.error('[EditMenu] Failed to load boat-hud3.png from ../img/vehicle-hud/')
                         e.currentTarget.style.display = 'none'
                       }}
-                      style={{ 
-                        width: '100%', 
-                        height: '120px', 
-                        objectFit: 'contain', 
-                        marginBottom: '8px',
-                        borderRadius: '4px',
-                        backgroundColor: 'rgba(0, 150, 200, 0.1)'
-                      }} 
+                      className="style-preview-img" 
                     />
-                    <span style={{ fontWeight: '600' }}>Boat HUD 3</span>
-                    <small style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'center' }}>Maritime cards with navigation</small>
+                    <span className="style-btn-label">Boat HUD 3</span>
+                    <small className="style-btn-caption">Maritime cards with navigation</small>
                   </button>
                 </div>
               </div>
@@ -1179,17 +1092,18 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
             {!currentSettings.useVehicleHudForBoats && (
               <div className="control-group" style={{ marginTop: '20px' }}>
                 <label>BOAT SPEED UNIT</label>
-                <select 
-                  value={currentSettings.boatSpeedUnit || 'mph'} 
-                  onChange={(e) => {
-                    const newSettings = { ...currentSettings, boatSpeedUnit: e.target.value as 'kmh' | 'mph' }
+                <Dropdown
+                  value={currentSettings.boatSpeedUnit || 'mph'}
+                  options={[
+                    { value: 'kmh', label: 'Kilometers (KMH)' },
+                    { value: 'mph', label: 'Miles (MPH)' }
+                  ]}
+                  onChange={(v) => {
+                    const newSettings = { ...currentSettings, boatSpeedUnit: v as 'kmh' | 'mph' }
                     setCurrentSettings(newSettings)
                     onSave(newSettings)
                   }}
-                >
-                  <option value="kmh">Kilometers (KMH)</option>
-                  <option value="mph">Miles (MPH)</option>
-                </select>
+                />
               </div>
             )}
 
@@ -1201,7 +1115,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
               padding: '20px',
               marginTop: '30px'
             }}>
-              <h3 style={{ color: '#ffffff', marginBottom: '15px' }}>Boat HUD Features:</h3>
+              <h3 className="section-heading">Boat HUD Features:</h3>
               <ul style={{ 
                 listStyle: 'none', 
                 padding: 0, 
@@ -1302,13 +1216,6 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       setCurrentSettings(newSettings)
                       onSave(newSettings)
                     }}
-                    style={{ 
-                      display: 'flex', 
-                      flexDirection: 'column', 
-                      alignItems: 'center', 
-                      padding: '12px',
-                      minHeight: '180px'
-                    }}
                   >
                     <img 
                       src="../img/vehicle-hud/flight-hud.png" 
@@ -1317,17 +1224,10 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         console.error('[EditMenu] Failed to load flight-hud.png from ../img/vehicle-hud/')
                         e.currentTarget.style.display = 'none'
                       }}
-                      style={{ 
-                        width: '100%', 
-                        height: '120px', 
-                        objectFit: 'contain', 
-                        marginBottom: '8px',
-                        borderRadius: '4px',
-                        backgroundColor: 'rgba(0, 119, 182, 0.1)'
-                      }} 
+                      className="style-preview-img" 
                     />
-                    <span style={{ fontWeight: '600' }}>Flight HUD 1</span>
-                    <small style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'center' }}>Digital flight instruments</small>
+                    <span className="style-btn-label">Flight HUD 1</span>
+                    <small className="style-btn-caption">Digital flight instruments</small>
                   </button>
                 </div>
               </div>
@@ -1337,18 +1237,19 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
             {currentSettings.flightHudEnabled !== false && !currentSettings.useVehicleHudForAircraft && (
               <div className="control-group" style={{ marginTop: '20px' }}>
                 <label>AIRSPEED UNIT</label>
-                <select 
-                  value={currentSettings.flightSpeedUnit || 'mph'} 
-                  onChange={(e) => {
-                    const newSettings = { ...currentSettings, flightSpeedUnit: e.target.value as 'kmh' | 'mph' | 'knots' }
+                <Dropdown
+                  value={currentSettings.flightSpeedUnit || 'mph'}
+                  options={[
+                    { value: 'kmh', label: 'Kilometers per Hour (KMH)' },
+                    { value: 'mph', label: 'Miles per Hour (MPH)' },
+                    { value: 'knots', label: 'Knots (KTS)' }
+                  ]}
+                  onChange={(v) => {
+                    const newSettings = { ...currentSettings, flightSpeedUnit: v as 'kmh' | 'mph' | 'knots' }
                     setCurrentSettings(newSettings)
                     onSave(newSettings)
                   }}
-                >
-                  <option value="kmh">Kilometers per Hour (KMH)</option>
-                  <option value="mph">Miles per Hour (MPH)</option>
-                  <option value="knots">Knots (KTS)</option>
-                </select>
+                />
               </div>
             )}
 
@@ -1361,7 +1262,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                 padding: '20px',
                 marginTop: '30px'
               }}>
-                <h3 style={{ color: '#ffffff', marginBottom: '15px' }}>Flight HUD Features:</h3>
+                <h3 className="section-heading">Flight HUD Features:</h3>
                 <ul style={{ 
                   listStyle: 'none', 
                   padding: 0, 
@@ -1443,13 +1344,6 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         setCurrentSettings(newSettings)
                         onSave(newSettings)
                       }}
-                      style={{ 
-                        display: 'flex', 
-                        flexDirection: 'column', 
-                        alignItems: 'center', 
-                        padding: '12px',
-                        minHeight: '180px'
-                      }}
                     >
                       <img 
                         src="../img/vehicle-hud/helicopter-hud.png" 
@@ -1458,17 +1352,10 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                           console.error('[EditMenu] Failed to load helicopter-hud.png from ../img/vehicle-hud/')
                           e.currentTarget.style.display = 'none'
                         }}
-                        style={{ 
-                          width: '100%', 
-                          height: '120px', 
-                          objectFit: 'contain', 
-                          marginBottom: '8px',
-                          borderRadius: '4px',
-                          backgroundColor: 'rgba(0, 119, 182, 0.1)'
-                        }} 
+                        className="style-preview-img" 
                       />
-                      <span style={{ fontWeight: '600' }}>Helicopter HUD 1</span>
-                      <small style={{ fontSize: '11px', opacity: 0.7, marginTop: '4px', textAlign: 'center' }}>Digital helicopter instruments</small>
+                      <span className="style-btn-label">Helicopter HUD 1</span>
+                      <small className="style-btn-caption">Digital helicopter instruments</small>
                     </button>
                   </div>
                 </div>
@@ -1478,18 +1365,19 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
               {!currentSettings.useVehicleHudForHelicopters && (
                 <div className="control-group" style={{ marginTop: '20px' }}>
                   <label>AIRSPEED UNIT</label>
-                  <select 
-                    value={currentSettings.helicopterSpeedUnit || 'mph'} 
-                    onChange={(e) => {
-                      const newSettings = { ...currentSettings, helicopterSpeedUnit: e.target.value as 'kmh' | 'mph' | 'knots' }
+                  <Dropdown
+                    value={currentSettings.helicopterSpeedUnit || 'mph'}
+                    options={[
+                      { value: 'kmh', label: 'Kilometers per Hour (KMH)' },
+                      { value: 'mph', label: 'Miles per Hour (MPH)' },
+                      { value: 'knots', label: 'Knots (KTS)' }
+                    ]}
+                    onChange={(v) => {
+                      const newSettings = { ...currentSettings, helicopterSpeedUnit: v as 'kmh' | 'mph' | 'knots' }
                       setCurrentSettings(newSettings)
                       onSave(newSettings)
                     }}
-                  >
-                    <option value="kmh">Kilometers per Hour (KMH)</option>
-                    <option value="mph">Miles per Hour (MPH)</option>
-                    <option value="knots">Knots (KTS)</option>
-                  </select>
+                  />
                 </div>
               )}
 
@@ -1500,7 +1388,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                 padding: '20px',
                 marginTop: '20px'
               }}>
-                <h3 style={{ color: '#ffffff', marginBottom: '15px' }}>Helicopter HUD Features:</h3>
+                <h3 className="section-heading">Helicopter HUD Features:</h3>
                 <ul style={{ 
                   listStyle: 'none', 
                   padding: 0, 
@@ -1544,15 +1432,19 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
               {/* MINIMAP SECTION */}
               <div>
-                <h3 style={{ color: '#6496c8', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>Minimap</h3>
+                <h3 className="section-heading">Minimap</h3>
                 
                 {/* Minimap Style */}
                 <div className="control-group">
                   <label>MINIMAP STYLE</label>
-                  <select 
+                  <Dropdown
                     value={currentSettings.minimap?.minimapStyle || 'rounded'}
-                    onChange={(e) => {
-                      const minimapStyle = e.target.value as 'square' | 'rounded'
+                    options={[
+                      { value: 'square', label: 'Square Minimap' },
+                      { value: 'rounded', label: 'Rounded Minimap' }
+                    ]}
+                    onChange={(v) => {
+                      const minimapStyle = v as 'square' | 'rounded'
                       const newSettings = { ...currentSettings, minimap: { ...currentSettings.minimap, minimapStyle } }
                       setCurrentSettings(newSettings)
                       onSave(newSettings)
@@ -1566,32 +1458,30 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         body: JSON.stringify({ minimapStyle })
                       }).catch(err => console.error('Failed to update minimap style:', err))
                     }}
-                  >
-                    <option value="square">Square Minimap</option>
-                    <option value="rounded">Rounded Minimap</option>
-                  </select>
+                  />
                 </div>
               </div>
 
               {/* COMPASS SECTION */}
               <div>
-                <h3 style={{ color: '#6496c8', fontSize: '12px', fontWeight: '700', textTransform: 'uppercase', marginBottom: '16px', letterSpacing: '0.5px' }}>Compass</h3>
+                <h3 className="section-heading">Compass</h3>
                 
                 {/* Compass Border Radius */}
                 <div className="control-group" style={{ marginBottom: '16px' }}>
                   <label>Compass Border Radius</label>
-                  <select 
+                  <Dropdown
                     value={currentSettings.minimap?.compassBorderRadius || 'rounded'}
-                    onChange={(e) => {
-                      const newSettings = { ...currentSettings, minimap: { ...currentSettings.minimap, compassBorderRadius: e.target.value as 'square' | 'circle' | 'rounded' } }
+                    options={[
+                      { value: 'square', label: 'Square' },
+                      { value: 'circle', label: 'Circle' },
+                      { value: 'rounded', label: 'Slightly Rounded' }
+                    ]}
+                    onChange={(v) => {
+                      const newSettings = { ...currentSettings, minimap: { ...currentSettings.minimap, compassBorderRadius: v as 'square' | 'circle' | 'rounded' } }
                       setCurrentSettings(newSettings)
                       onSave(newSettings)
                     }}
-                  >
-                    <option value="square">Square</option>
-                    <option value="circle">Circle</option>
-                    <option value="rounded">Slightly Rounded</option>
-                  </select>
+                  />
                 </div>
 
                 {/* Compass Primary Color */}
@@ -1607,13 +1497,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         onSave(newSettings)
                         console.log('[EditMenu] Compass primary color changed to:', e.target.value)
                       }}
-                      style={{ 
-                        width: '60px', 
-                        height: '40px', 
-                        border: '2px solid rgba(100, 150, 200, 0.3)', 
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
+                      className="color-swatch-input"
                     />
                     <input
                       type="text"
@@ -1624,15 +1508,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         onSave(newSettings)
                       }}
                       placeholder="#FFFFFF"
-                      style={{
-                        flex: 1,
-                        padding: '10px 12px',
-                        background: '#1a1a1a',
-                        border: '1px solid rgba(100, 150, 200, 0.3)',
-                        borderRadius: '6px',
-                        color: '#ffffff',
-                        fontSize: '13px'
-                      }}
+                      
                     />
                   </div>
                 </div>
@@ -1650,13 +1526,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         onSave(newSettings)
                         console.log('[EditMenu] Compass background color changed to:', e.target.value + '80')
                       }}
-                      style={{ 
-                        width: '60px', 
-                        height: '40px', 
-                        border: '2px solid rgba(100, 150, 200, 0.3)', 
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
+                      className="color-swatch-input"
                     />
                     <input
                       type="text"
@@ -1667,15 +1537,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         onSave(newSettings)
                       }}
                       placeholder="#00000080"
-                      style={{
-                        flex: 1,
-                        padding: '10px 12px',
-                        background: '#1a1a1a',
-                        border: '1px solid rgba(100, 150, 200, 0.3)',
-                        borderRadius: '6px',
-                        color: '#ffffff',
-                        fontSize: '13px'
-                      }}
+                      
                     />
                   </div>
                 </div>
@@ -1693,13 +1555,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         onSave(newSettings)
                         console.log('[EditMenu] Compass shadow color changed to:', e.target.value)
                       }}
-                      style={{ 
-                        width: '60px', 
-                        height: '40px', 
-                        border: '2px solid rgba(100, 150, 200, 0.3)', 
-                        borderRadius: '6px',
-                        cursor: 'pointer'
-                      }}
+                      className="color-swatch-input"
                     />
                     <input
                       type="text"
@@ -1710,15 +1566,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         onSave(newSettings)
                       }}
                       placeholder="#000000"
-                      style={{
-                        flex: 1,
-                        padding: '10px 12px',
-                        background: '#1a1a1a',
-                        border: '1px solid rgba(100, 150, 200, 0.3)',
-                        borderRadius: '6px',
-                        color: '#ffffff',
-                        fontSize: '13px'
-                      }}
+                      
                     />
                   </div>
                 </div>
@@ -2361,14 +2209,24 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
 
         {activeTab === 'notifications' && (
           <div className="notification-settings">
-            <h2 style={{ color: '#6496c8', fontSize: '16px', fontWeight: '700', marginBottom: '24px' }}>NOTIFICATION SETTINGS</h2>
+            <h2 style={{ color: 'var(--amber)', fontSize: '16px', fontWeight: '700', marginBottom: '24px' }}>NOTIFICATION SETTINGS</h2>
             
             {/* Position Selection */}
             <div className="control-group" style={{ marginBottom: '24px' }}>
               <label>NOTIFICATION POSITION</label>
-              <select 
+              <Dropdown
                 value={currentSettings.notification?.position || 'top-right'}
-                onChange={(e) => {
+                options={[
+                  { value: 'top-left', label: 'Top Left' },
+                  { value: 'top-center', label: 'Top Center' },
+                  { value: 'top-right', label: 'Top Right' },
+                  { value: 'center-left', label: 'Center Left' },
+                  { value: 'center-right', label: 'Center Right' },
+                  { value: 'bottom-left', label: 'Bottom Left' },
+                  { value: 'bottom-center', label: 'Bottom Center' },
+                  { value: 'bottom-right', label: 'Bottom Right' }
+                ]}
+                onChange={(v) => {
                   const newSettings = { 
                     ...currentSettings, 
                     notification: { 
@@ -2379,26 +2237,17 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         errorColor: '#ef4444',
                         warningColor: '#f59e0b',
                         infoColor: '#3b82f6',
-                        bgColor: '#1a1a1a',
+                        bgColor: 'var(--ink-0)',
                         textColor: '#ffffff',
-                        timerColor: '#6496c8',
+                        timerColor: 'var(--amber)',
                         transparency: 90
                       }, 
-                      position: e.target.value as any 
+                      position: v as any 
                     } 
                   }
                   debouncedSave(newSettings)
                 }}
-              >
-                <option value="top-left">Top Left</option>
-                <option value="top-center">Top Center</option>
-                <option value="top-right">Top Right</option>
-                <option value="center-left">Center Left</option>
-                <option value="center-right">Center Right</option>
-                <option value="bottom-left">Bottom Left</option>
-                <option value="bottom-center">Bottom Center</option>
-                <option value="bottom-right">Bottom Right</option>
-              </select>
+              />
             </div>
 
 
@@ -2421,9 +2270,9 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                           errorColor: '#ef4444',
                           warningColor: '#f59e0b',
                           infoColor: '#3b82f6',
-                          bgColor: '#1a1a1a',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
-                          timerColor: '#6496c8',
+                          timerColor: 'var(--amber)',
                           transparency: 90
                         }, 
                         successColor: e.target.value 
@@ -2431,7 +2280,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
               <div className="color-field">
@@ -2450,9 +2299,9 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                           errorColor: '#ef4444',
                           warningColor: '#f59e0b',
                           infoColor: '#3b82f6',
-                          bgColor: '#1a1a1a',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
-                          timerColor: '#6496c8',
+                          timerColor: 'var(--amber)',
                           transparency: 90
                         }, 
                         errorColor: e.target.value 
@@ -2460,7 +2309,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
               <div className="color-field">
@@ -2479,9 +2328,9 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                           errorColor: '#ef4444',
                           warningColor: '#f59e0b',
                           infoColor: '#3b82f6',
-                          bgColor: '#1a1a1a',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
-                          timerColor: '#6496c8',
+                          timerColor: 'var(--amber)',
                           transparency: 90
                         }, 
                         warningColor: e.target.value 
@@ -2489,7 +2338,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
               <div className="color-field">
@@ -2508,9 +2357,9 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                           errorColor: '#ef4444',
                           warningColor: '#f59e0b',
                           infoColor: '#3b82f6',
-                          bgColor: '#1a1a1a',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
-                          timerColor: '#6496c8',
+                          timerColor: 'var(--amber)',
                           transparency: 90
                         }, 
                         infoColor: e.target.value 
@@ -2518,14 +2367,14 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
               <div className="color-field">
                 <label>Background Color</label>
                 <input 
                   type="color" 
-                  value={currentSettings.notification?.bgColor || '#1a1a1a'}
+                  value={currentSettings.notification?.bgColor || 'var(--ink-0)'}
                   onChange={(e) => {
                     const newSettings = { 
                       ...currentSettings, 
@@ -2537,9 +2386,9 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                           errorColor: '#ef4444',
                           warningColor: '#f59e0b',
                           infoColor: '#3b82f6',
-                          bgColor: '#1a1a1a',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
-                          timerColor: '#6496c8',
+                          timerColor: 'var(--amber)',
                           transparency: 90
                         }, 
                         bgColor: e.target.value 
@@ -2547,7 +2396,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
               <div className="color-field">
@@ -2566,9 +2415,9 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                           errorColor: '#ef4444',
                           warningColor: '#f59e0b',
                           infoColor: '#3b82f6',
-                          bgColor: '#1a1a1a',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
-                          timerColor: '#6496c8',
+                          timerColor: 'var(--amber)',
                           transparency: 90
                         }, 
                         textColor: e.target.value 
@@ -2576,7 +2425,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
             </div>
@@ -2600,9 +2449,9 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         errorColor: '#ef4444',
                         warningColor: '#f59e0b',
                         infoColor: '#3b82f6',
-                        bgColor: '#1a1a1a',
+                        bgColor: 'var(--ink-0)',
                         textColor: '#ffffff',
-                        timerColor: '#6496c8',
+                        timerColor: 'var(--amber)',
                         transparency: 90
                       }, 
                       transparency: parseInt(e.target.value) 
@@ -2646,39 +2495,40 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
 
         {activeTab === 'progressbar' && (
           <div className="progressbar-settings">
-            <h2 style={{ color: '#6496c8', fontSize: '16px', fontWeight: '700', marginBottom: '24px' }}>PROGRESS BAR SETTINGS</h2>
+            <h2 style={{ color: 'var(--amber)', fontSize: '16px', fontWeight: '700', marginBottom: '24px' }}>PROGRESS BAR SETTINGS</h2>
             
             {/* Position Selection */}
             <div className="control-group" style={{ marginBottom: '24px' }}>
               <label>PROGRESS BAR POSITION</label>
-              <select 
+              <Dropdown
                 value={currentSettings.progressBar?.position || 'bottom-center'}
-                onChange={(e) => {
+                options={[
+                  { value: 'top-center', label: 'Top Center' },
+                  { value: 'bottom-left', label: 'Bottom Left' },
+                  { value: 'bottom-center', label: 'Bottom Center' },
+                  { value: 'bottom-right', label: 'Bottom Right' }
+                ]}
+                onChange={(v) => {
                   const newSettings = { 
                     ...currentSettings, 
                     progressBar: { 
                       ...currentSettings.progressBar || {
                         position: 'bottom-center',
                         style: 'style1',
-                        defaultColor: '#6496c8',
-                        bgColor: '#1a1a1a',
+                        defaultColor: 'var(--amber)',
+                        bgColor: 'var(--ink-0)',
                         textColor: '#ffffff',
                         timerColor: '#ffffff',
                         percentageColor: '#ffffff',
                         iconColor: '#ffffff',
                         transparency: 90
                       }, 
-                      position: e.target.value as any 
+                      position: v as any 
                     } 
                   }
                   debouncedSave(newSettings)
                 }}
-              >
-                <option value="top-center">Top Center</option>
-                <option value="bottom-left">Bottom Left</option>
-                <option value="bottom-center">Bottom Center</option>
-                <option value="bottom-right">Bottom Right</option>
-              </select>
+              />
             </div>
 
 
@@ -2689,7 +2539,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                 <label>Progress Color</label>
                 <input 
                   type="color" 
-                  value={currentSettings.progressBar?.defaultColor || '#6496c8'}
+                  value={currentSettings.progressBar?.defaultColor || 'var(--amber)'}
                   onChange={(e) => {
                     const newSettings = { 
                       ...currentSettings, 
@@ -2697,8 +2547,8 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         ...currentSettings.progressBar || {
                           position: 'bottom-center',
                           style: 'style1',
-                          defaultColor: '#6496c8',
-                          bgColor: '#1a1a1a',
+                          defaultColor: 'var(--amber)',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
                           timerColor: '#ffffff',
                           percentageColor: '#ffffff',
@@ -2710,14 +2560,14 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
               <div className="color-field">
                 <label>Background Color</label>
                 <input 
                   type="color" 
-                  value={currentSettings.progressBar?.bgColor || '#1a1a1a'}
+                  value={currentSettings.progressBar?.bgColor || 'var(--ink-0)'}
                   onChange={(e) => {
                     const newSettings = { 
                       ...currentSettings, 
@@ -2725,8 +2575,8 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         ...currentSettings.progressBar || {
                           position: 'bottom-center',
                           style: 'style1',
-                          defaultColor: '#6496c8',
-                          bgColor: '#1a1a1a',
+                          defaultColor: 'var(--amber)',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
                           timerColor: '#ffffff',
                           percentageColor: '#ffffff',
@@ -2738,7 +2588,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
               <div className="color-field">
@@ -2753,8 +2603,8 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         ...currentSettings.progressBar || {
                           position: 'bottom-center',
                           style: 'style1',
-                          defaultColor: '#6496c8',
-                          bgColor: '#1a1a1a',
+                          defaultColor: 'var(--amber)',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
                           timerColor: '#ffffff',
                           percentageColor: '#ffffff',
@@ -2766,7 +2616,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
               <div className="color-field">
@@ -2781,8 +2631,8 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                         ...currentSettings.progressBar || {
                           position: 'bottom-center',
                           style: 'style1',
-                          defaultColor: '#6496c8',
-                          bgColor: '#1a1a1a',
+                          defaultColor: 'var(--amber)',
+                          bgColor: 'var(--ink-0)',
                           textColor: '#ffffff',
                           timerColor: '#ffffff',
                           percentageColor: '#ffffff',
@@ -2794,7 +2644,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                     }
                     debouncedSave(newSettings)
                   }}
-                  style={{ width: '100%', height: '40px', cursor: 'pointer' }}
+                  className="color-swatch-input wide"
                 />
               </div>
             </div>
@@ -2814,8 +2664,8 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                       ...currentSettings.progressBar || {
                         position: 'bottom-center',
                         style: 'style1',
-                        defaultColor: '#6496c8',
-                        bgColor: '#1a1a1a',
+                        defaultColor: 'var(--amber)',
+                        bgColor: 'var(--ink-0)',
                         textColor: '#ffffff',
                         timerColor: '#ffffff',
                         percentageColor: '#ffffff',
@@ -2846,7 +2696,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
               }}
               style={{
                 padding: '12px 24px',
-                background: '#6496c8',
+                background: 'var(--amber)',
                 border: 'none',
                 borderRadius: '8px',
                 color: '#ffffff',
@@ -2862,19 +2712,19 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
 
         {activeTab === 'import' && (
           <div className="import-export-settings">
-            <h2 style={{ color: '#6496c8', fontSize: '16px', fontWeight: '700', marginBottom: '24px' }}>IMPORT & EXPORT</h2>
+            <h2 style={{ color: 'var(--amber)', fontSize: '16px', fontWeight: '700', marginBottom: '24px' }}>IMPORT & EXPORT</h2>
             
             {/* Current Configuration */}
             <div style={{ marginBottom: '32px' }}>
-              <h3 style={{ color: '#ffffff', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>Current Configuration</h3>
+              <h3 className="section-heading">Current Configuration</h3>
               <textarea 
                 readOnly
                 value={JSON.stringify(generateHUDConfig(), null, 2)}
                 style={{
                   width: '100%',
                   height: '300px',
-                  background: '#1a1a1a',
-                  border: '1px solid rgba(100, 150, 200, 0.3)',
+                  background: 'var(--ink-0)',
+                  border: '1px solid var(--line-2)',
                   borderRadius: '8px',
                   padding: '12px',
                   color: '#ffffff',
@@ -2888,7 +2738,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                 style={{
                   marginTop: '12px',
                   padding: '10px 20px',
-                  background: '#6496c8',
+                  background: 'var(--amber)',
                   border: 'none',
                   borderRadius: '6px',
                   color: '#ffffff',
@@ -2903,7 +2753,7 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
 
             {/* Import Section */}
             <div>
-              <h3 style={{ color: '#ffffff', fontSize: '14px', fontWeight: '600', marginBottom: '12px' }}>Import Configuration</h3>
+              <h3 className="section-heading">Import Configuration</h3>
               <textarea 
                 value={importJson}
                 onChange={(e) => setImportJson(e.target.value)}
@@ -2911,8 +2761,8 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
                 style={{
                   width: '100%',
                   height: '200px',
-                  background: '#1a1a1a',
-                  border: '1px solid rgba(100, 150, 200, 0.3)',
+                  background: 'var(--ink-0)',
+                  border: '1px solid var(--line-2)',
                   borderRadius: '8px',
                   padding: '12px',
                   color: '#ffffff',
@@ -2956,11 +2806,11 @@ const EditMenu = ({ isOpen, onClose, settings, onSave, onOpenPositioningMode, on
             <div style={{
               marginTop: '32px',
               padding: '16px',
-              background: 'rgba(100, 150, 200, 0.1)',
-              border: '1px solid rgba(100, 150, 200, 0.3)',
+              background: 'var(--ink-0)',
+              border: '1px solid var(--line-2)',
               borderRadius: '8px'
             }}>
-              <h4 style={{ color: '#6496c8', fontSize: '13px', fontWeight: '600', marginBottom: '8px' }}>ℹ️ How to use:</h4>
+              <h4 className="section-heading">ℹ️ How to use:</h4>
               <ul style={{ color: '#cccccc', fontSize: '12px', lineHeight: '1.6', paddingLeft: '20px' }}>
                 <li>Copy your current configuration to share with others</li>
                 <li>Paste a configuration JSON to import settings</li>

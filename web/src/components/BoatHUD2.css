@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
 
 .boathud2-container {
   position: fixed;
@@ -64,7 +63,7 @@
 }
 
 .boathud2-gear {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
   font-size: 28px;
   font-weight: 900;
   color: #ffffff;
@@ -74,7 +73,7 @@
 }
 
 .boathud2-speed {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
   font-size: 48px;
   font-weight: 900;
   color: #ffffff;
@@ -84,7 +83,7 @@
 }
 
 .boathud2-unit {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
   font-size: 16px;
   font-weight: 600;
   color: rgba(255, 255, 255, 0.7);
@@ -126,7 +125,7 @@
 }
 
 .boathud2-status-item span {
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
   font-size: 10px;
   font-weight: 700;
   color: #ffffff;

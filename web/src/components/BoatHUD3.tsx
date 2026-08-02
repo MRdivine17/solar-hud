@@ -12,6 +12,8 @@ interface BoatHUD3Props {
   waveHeight?: number
   waterDepth?: number
   compassHeading?: number
+  /** Config.DistanceMeasurement - the client already converts the values */
+  distanceUnit?: 'meters' | 'feet'
 }
 
 const BoatHUD3 = ({
@@ -24,8 +26,10 @@ const BoatHUD3 = ({
   speedUnit = 'mph',
   waveHeight = 0,
   waterDepth = 0,
-  compassHeading = 0
+  compassHeading = 0,
+  distanceUnit = 'meters'
 }: BoatHUD3Props) => {
+  const distanceSuffix = distanceUnit === 'feet' ? 'ft' : 'm'
   // Speed conversion
   const isKmh = speedUnit === 'kmh'
   let displaySpeed = Math.abs(speed)
@@ -71,7 +75,7 @@ const BoatHUD3 = ({
           <div className="boathud3-nav-divider" />
           <div className="boathud3-nav-item">
             <span className="boathud3-nav-label">DEPTH</span>
-            <span className="boathud3-nav-value depth">{Math.floor(waterDepth)}m</span>
+            <span className="boathud3-nav-value depth">{Math.floor(waterDepth)}{distanceSuffix}</span>
           </div>
         </div>
       </div>
@@ -89,7 +93,7 @@ const BoatHUD3 = ({
               {getWaveCondition(waveHeight)}
             </span>
           </div>
-          <div className="boathud3-condition-value">{waveHeight.toFixed(1)}m</div>
+          <div className="boathud3-condition-value">{waveHeight.toFixed(1)}{distanceSuffix}</div>
         </div>
       </div>
 

@@ -1,7 +1,8 @@
 import { memo, useRef, useState } from 'react'
 import * as React from 'react'
 import { WeaponData, PlayerInfoSettings } from '../types'
-import { getPositionFromBottomRight } from '../utils/responsive'
+import { readPosition, writePosition } from '../utils/layout'
+import { useViewport } from '../hooks/useViewport'
 import './WeaponDisplay.css'
 
 interface WeaponDisplayProps {
@@ -26,7 +27,6 @@ const DraggableWeaponWrapper = memo(({
   positioningMode, 
   hudSettings, 
   layoutStyle,
-  defaultPosition,
   width = 350,
   height = 60
 }: {
@@ -34,7 +34,6 @@ const DraggableWeaponWrapper = memo(({
   positioningMode?: boolean
   hudSettings?: any
   layoutStyle: string
-  defaultPosition: { x: number; y: number }
   width?: number
   height?: number
 }) => {
@@ -45,8 +44,11 @@ const DraggableWeaponWrapper = memo(({
   // Get layout-specific position key
   const positionKey = `weaponDisplay_${layoutStyle}`
   
-  // Get position from settings or use default
-  const savedPosition = hudSettings?.uiPositions?.[positionKey] || defaultPosition
+  // Resolve the stored design-space record against the live viewport
+  const vp = useViewport()
+  const savedPosition = readPosition(hudSettings?.uiPositions, positionKey, vp, {
+    v: 2, anchor: 'BR', dx: 250, dy: 290, w: width, h: height
+  })
   
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (!positioningMode || !hudSettings) {
@@ -94,20 +96,18 @@ const DraggableWeaponWrapper = memo(({
     
     // Save position immediately
     if (containerRef.current && hudSettings) {
-      const rect = containerRef.current.getBoundingClientRect()
-      const finalX = rect.left
-      const finalY = rect.top
-      
+      // Merge onto the LATEST saved settings, never onto the prop: the prop can
+      // carry config.lua overrides (bars/cards force-hidden server-side) which
+      // must never be written into the player's own saved settings.
+      const rawSaved = localStorage.getItem('hudSettings')
+      const baseSettings = rawSaved ? JSON.parse(rawSaved) : hudSettings
+
       const updatedSettings = {
-        ...hudSettings,
+        ...baseSettings,
         uiPositions: {
-          ...(hudSettings.uiPositions || {}),
-          [positionKey]: {
-            x: finalX,
-            y: finalY,
-            width: width,
-            height: height
-          }
+          ...(baseSettings.uiPositions || {}),
+          // stored resolution-independently (design space + anchor)
+          [positionKey]: writePosition(containerRef.current, vp, positionKey)
         }
       }
       
@@ -135,12 +135,12 @@ const DraggableWeaponWrapper = memo(({
       ref={containerRef}
       style={{
         position: 'absolute',
-        left: `${savedPosition.x}px`,
-        top: `${savedPosition.y}px`,
+        left: `${savedPosition.left}px`,
+        top: `${savedPosition.top}px`,
         cursor: positioningMode ? 'move' : 'default',
-        outline: positioningMode ? '3px solid rgba(59, 130, 246, 0.8)' : 'none',
+        outline: positioningMode ? '1px dashed rgba(245, 165, 36, 0.65)' : 'none',
         outlineOffset: '3px',
-        boxShadow: positioningMode ? '0 0 20px rgba(59, 130, 246, 0.5)' : 'none',
+        boxShadow: positioningMode ? '0 0 0 1px rgba(0,0,0,0.5), 0 0 26px -6px rgba(245, 165, 36, 0.45)' : 'none',
         pointerEvents: positioningMode ? 'auto' : 'none',
         touchAction: 'none',
         zIndex: positioningMode ? 10000 : 'auto',
@@ -275,7 +275,6 @@ const WeaponDisplay = memo(({ weapon, settings, positioningMode, hudSettings }: 
         positioningMode={positioningMode}
         hudSettings={hudSettings}
         layoutStyle="modern"
-        defaultPosition={getPositionFromBottomRight(370, 350)}
         width={350}
         height={60}
       >
@@ -322,7 +321,6 @@ const WeaponDisplay = memo(({ weapon, settings, positioningMode, hudSettings }: 
         positioningMode={positioningMode}
         hudSettings={hudSettings}
         layoutStyle="grid"
-        defaultPosition={getPositionFromBottomRight(370, 350)}
         width={350}
         height={60}
       >
@@ -364,7 +362,6 @@ const WeaponDisplay = memo(({ weapon, settings, positioningMode, hudSettings }: 
       positioningMode={positioningMode}
       hudSettings={hudSettings}
       layoutStyle="miniature"
-      defaultPosition={getPositionFromBottomRight(370, 350)}
       width={350}
       height={60}
     >

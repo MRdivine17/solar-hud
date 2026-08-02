@@ -1,0 +1,114 @@
+/* ============================================================
+   SOLAR HUD - TYPOGRAPHY
+   ============================================================
+   One place decides the font for the whole UI.
+
+   ANTHROPIC SANS
+   --------------
+   Anthropic Sans is Anthropic's proprietary brand typeface. It is NOT
+   redistributable, so it is deliberately not bundled with this resource.
+
+   If you hold a licence for it, drop the files into the resource's
+   <resource>/fonts/ folder using exactly these names and it takes over the
+   entire UI automatically - no code changes:
+
+       fonts/AnthropicSans-Regular.woff2    (400)
+       fonts/AnthropicSans-Medium.woff2     (500)
+       fonts/AnthropicSans-SemiBold.woff2   (600)
+       fonts/AnthropicSans-Bold.woff2       (700)
+
+   The paths below are absolute NUI URLs, so Vite does not try to resolve
+   them at build time. If a file is absent the browser simply skips that
+   @font-face and falls through to the next family in --hud-font.
+
+   The shipped fallback is Inter (SIL Open Font License 1.1), self-hosted via
+   @fontsource-variable/inter - no Google Fonts, no network requests.
+   ============================================================ */
+
+@font-face {
+  font-family: 'Anthropic Sans';
+  src: url('/fonts/AnthropicSans-Regular.woff2') format('woff2');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Sans';
+  src: url('/fonts/AnthropicSans-Medium.woff2') format('woff2');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Sans';
+  src: url('/fonts/AnthropicSans-SemiBold.woff2') format('woff2');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Anthropic Sans';
+  src: url('/fonts/AnthropicSans-Bold.woff2') format('woff2');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+:root {
+  /* Every piece of UI text in the HUD resolves to this */
+  --hud-font:
+    'Anthropic Sans',
+    'Inter Variable',
+    'Inter',
+    'Segoe UI',
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    Roboto,
+    sans-serif;
+
+  /* Gauges / speedometers. Same family by design - change this line alone if
+     you ever want a separate display face for the vehicle HUDs. */
+  --hud-font-display: var(--hud-font);
+
+  /* Kept monospace on purpose: the JSON import box, the hex colour input and
+     the coordinate readouts are unreadable in a proportional face. */
+  --hud-font-mono: ui-monospace, 'Cascadia Mono', 'Segoe UI Mono', Consolas, 'Courier New', monospace;
+}
+
+/* Apply everywhere, including elements that default to the browser font
+   (inputs, buttons, textareas) */
+html,
+body,
+#root,
+input,
+button,
+textarea,
+select {
+  font-family: var(--hud-font);
+}
+
+/* Crisper rendering for light text over the game world */
+html,
+body {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Numbers that change every frame (speed, RPM, fuel, ammo, money) must not
+   jitter as digits swap width */
+.hud-container,
+.vehicle-speedometer,
+.vehicle-hud2,
+.style3-container,
+.style4-hud-container,
+.boathud3-container,
+.flighthud-container,
+.helicopterhud-container {
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}

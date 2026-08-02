@@ -1,4 +1,3 @@
-@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&display=swap');
 
 /* Digital Flight HUD Container */
 .flighthud-digital-container {
@@ -9,7 +8,7 @@
   flex-direction: column;
   gap: 8px;
   z-index: 1000;
-  font-family: 'Orbitron', monospace;
+  font-family: var(--hud-font-display);
 }
 
 /* Digital Row */

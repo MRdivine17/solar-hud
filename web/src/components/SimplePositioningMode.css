@@ -1,116 +1,216 @@
+/* ============================================================================
+   SOLAR HUD - SIMPLE POSITIONING MODE (/hudposition)
+   Matches the settings panel + edit mode: graphite, hairlines, signal amber.
+   ========================================================================= */
+
 .simple-positioning-overlay {
+  --ink-0: #07080a;
+  --ink-1: #0b0d11;
+  --ink-2: #101319;
+
+  --line: rgba(255, 255, 255, 0.07);
+  --line-2: rgba(255, 255, 255, 0.12);
+
+  --text: #e9ebef;
+  --text-dim: #99a0ac;
+  --text-mute: #646b78;
+
+  --amber: #f5a524;
+  --amber-bright: #ffc355;
+  --amber-dim: rgba(245, 165, 36, 0.5);
+  --amber-wash: rgba(245, 165, 36, 0.1);
+  --amber-glow: rgba(245, 165, 36, 0.35);
+
   position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
+  inset: 0;
   z-index: 9998;
-  backdrop-filter: blur(4px);
+  font-family: var(--hud-font);
+  background:
+    radial-gradient(90% 70% at 50% 50%, rgba(0, 0, 0, 0.45) 0%, rgba(0, 0, 0, 0.72) 100%);
+  backdrop-filter: blur(3px);
+  -webkit-backdrop-filter: blur(3px);
+  animation: sp-in 200ms ease-out;
+}
+
+@keyframes sp-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
 }
 
 .simple-positioning-grid {
   position: absolute;
+  inset: 0;
+  pointer-events: none;
+  mask-image: radial-gradient(120% 100% at 50% 50%, #000 40%, transparent 100%);
+  -webkit-mask-image: radial-gradient(120% 100% at 50% 50%, #000 40%, transparent 100%);
+}
+
+/* ---- instruction console ------------------------------------------------ */
+.simple-positioning-instructions {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10001;
+  width: 380px;
+  padding: 18px 20px;
+  text-align: left;
+  background: linear-gradient(180deg, var(--ink-2) 0%, var(--ink-1) 55%, var(--ink-0) 100%);
+  border: 1px solid var(--line-2);
+  border-radius: 10px;
+  box-shadow:
+    0 0 0 1px rgba(0, 0, 0, 0.6),
+    0 26px 70px -20px rgba(0, 0, 0, 0.9),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  animation: sp-panel-in 260ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes sp-panel-in {
+  from { opacity: 0; transform: translate(-50%, -10px); }
+  to   { opacity: 1; transform: translateX(-50%); }
+}
+
+.simple-positioning-instructions::before {
+  content: '';
+  position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  bottom: 0;
-  background-image: 
-    linear-gradient(rgba(100, 150, 200, 0.1) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(100, 150, 200, 0.1) 1px, transparent 1px);
-  background-size: 20px 20px;
-  pointer-events: none;
-}
-
-.simple-positioning-instructions {
-  position: fixed;
-  top: 20px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(20, 20, 25, 0.95);
-  border: 2px solid rgba(100, 150, 200, 0.5);
-  border-radius: 12px;
-  padding: 20px 30px;
-  text-align: center;
-  z-index: 10001;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--amber-dim), transparent);
 }
 
 .simple-positioning-instructions h3 {
-  margin: 0 0 10px 0;
-  color: #ffffff;
-  font-size: 18px;
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 8px;
+  font-family: var(--hud-font-mono);
+  font-size: 10.5px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--amber);
+}
+
+.simple-positioning-instructions h3::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--amber);
+  box-shadow: 0 0 10px var(--amber-glow);
+  animation: sp-blink 1.4s ease-in-out infinite;
+}
+
+@keyframes sp-blink {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.3; }
 }
 
 .simple-positioning-instructions p {
-  margin: 0 0 15px 0;
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 14px;
+  margin: 0 0 14px;
+  font-size: 11.5px;
+  line-height: 1.55;
+  color: var(--text-dim);
 }
 
+.simple-positioning-instructions label {
+  font-family: var(--hud-font-mono);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-mute);
+}
+
+.simple-positioning-instructions input[type='checkbox'] {
+  width: 14px;
+  height: 14px;
+  accent-color: var(--amber);
+  cursor: pointer;
+}
+
+/* ---- buttons ------------------------------------------------------------ */
 .simple-positioning-buttons {
   display: flex;
-  gap: 10px;
-  justify-content: center;
+  gap: 8px;
+  justify-content: stretch;
 }
 
 .simple-pos-save,
 .simple-pos-cancel {
-  padding: 10px 20px;
-  border: none;
-  border-radius: 6px;
-  font-size: 14px;
-  font-weight: 600;
+  flex: 1;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 3px;
+  font-family: var(--hud-font-mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 140ms ease;
 }
 
 .simple-pos-save {
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: #ffffff;
+  background: var(--amber);
+  border: 1px solid var(--amber);
+  color: var(--ink-0);
 }
 
 .simple-pos-save:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+  background: var(--amber-bright);
+  border-color: var(--amber-bright);
+  box-shadow: 0 0 22px -5px var(--amber-glow);
 }
 
 .simple-pos-cancel {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: transparent;
+  border: 1px solid var(--line-2);
+  color: var(--text-mute);
 }
 
 .simple-pos-cancel:hover {
-  background: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text);
 }
 
+/* ---- draggable proxies --------------------------------------------------- */
 .simple-drag-element {
-  border: 2px dashed rgba(100, 150, 200, 0.8);
-  background: rgba(100, 150, 200, 0.2);
-  border-radius: 8px;
-  padding: 8px;
   min-width: 60px;
   min-height: 60px;
-  transition: all 0.2s;
+  padding: 8px;
+  background:
+    repeating-linear-gradient(45deg, rgba(245, 165, 36, 0.05) 0 8px, transparent 8px 16px),
+    rgba(245, 165, 36, 0.05);
+  border: 1px dashed var(--amber-dim);
+  border-radius: 4px;
+  transition: border-color 140ms ease, box-shadow 140ms ease;
 }
 
 .simple-drag-element.dragging {
-  border-color: rgba(100, 200, 150, 1);
-  background: rgba(100, 200, 150, 0.3);
-  box-shadow: 0 8px 24px rgba(100, 200, 150, 0.4);
+  border-color: var(--amber);
+  border-style: solid;
+  background:
+    repeating-linear-gradient(45deg, rgba(245, 165, 36, 0.1) 0 8px, transparent 8px 16px),
+    rgba(245, 165, 36, 0.12);
+  box-shadow: 0 0 0 1px var(--amber-dim), 0 18px 44px -16px rgba(0, 0, 0, 0.9);
 }
 
 .simple-drag-label {
-  font-size: 10px;
-  color: #ffffff;
-  background: rgba(0, 0, 0, 0.8);
-  padding: 2px 6px;
-  border-radius: 4px;
   margin-bottom: 4px;
+  padding: 2px 6px;
+  background: var(--ink-0);
+  border: 1px solid var(--line-2);
+  border-radius: 3px;
+  font-family: var(--hud-font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
   text-align: center;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+  color: var(--amber);
 }
 
 .simple-drag-content {
@@ -123,6 +223,10 @@
 
 .hud-preview-statusIcon,
 .hud-preview-playerCard,
-.hud-preview-weapon {
-  opacity: 0.8;
+.hud-preview-weapon { opacity: 0.85; }
+
+@media (prefers-reduced-motion: reduce) {
+  .simple-positioning-overlay,
+  .simple-positioning-instructions { animation: none; }
+  .simple-positioning-instructions h3::before { animation: none; }
 }

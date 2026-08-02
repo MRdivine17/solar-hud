@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react'
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome'
-import { faCheckCircle, faExclamationCircle, faInfoCircle } from '@fortawesome/free-solid-svg-icons'
+import { faCheckCircle, faExclamationCircle, faInfoCircle, faTriangleExclamation } from '@fortawesome/free-solid-svg-icons'
 import './Notification.css'
 
-export type NotificationType = 'success' | 'error' | 'info'
+export type NotificationType = 'success' | 'error' | 'warning' | 'info'
 
 interface NotificationItem {
   id: string
@@ -60,6 +60,10 @@ class NotificationManager {
     return this.show('error', title, message, duration)
   }
 
+  warning(title: string, message: string, duration?: number) {
+    return this.show('warning', title, message, duration)
+  }
+
   info(title: string, message: string, duration?: number) {
     return this.show('info', title, message, duration)
   }
@@ -77,21 +81,23 @@ class NotificationManager {
 
 export const notificationManager = NotificationManager.getInstance()
 
-const NotificationItem = ({ 
-  notification, 
-  onClose, 
-  successColor, 
-  errorColor, 
-  infoColor, 
-  textColor, 
-  bgColor, 
+const NotificationItem = ({
+  notification,
+  onClose,
+  successColor,
+  errorColor,
+  warningColor,
+  infoColor,
+  textColor,
+  bgColor,
   transparency,
-  hexToRgba 
-}: { 
+  hexToRgba
+}: {
   notification: NotificationItem
   onClose: () => void
   successColor: string
   errorColor: string
+  warningColor: string
   infoColor: string
   textColor: string
   bgColor: string
@@ -115,6 +121,8 @@ const NotificationItem = ({
         return faCheckCircle
       case 'error':
         return faExclamationCircle
+      case 'warning':
+        return faTriangleExclamation
       case 'info':
         return faInfoCircle
       default:
@@ -129,6 +137,8 @@ const NotificationItem = ({
         return { iconBg: successColor, titleColor: successColor }
       case 'error':
         return { iconBg: errorColor, titleColor: errorColor }
+      case 'warning':
+        return { iconBg: warningColor, titleColor: warningColor }
       case 'info':
         return { iconBg: infoColor, titleColor: infoColor }
       default:
@@ -158,16 +168,18 @@ interface NotificationContainerProps {
   position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left' | 'top-center' | 'bottom-center' | 'center-left' | 'center-right'
   successColor?: string
   errorColor?: string
+  warningColor?: string
   infoColor?: string
   textColor?: string
   bgColor?: string
   transparency?: number
 }
 
-const NotificationContainer = ({ 
+const NotificationContainer = ({
   position = 'bottom-left',
   successColor = '#10b981',
   errorColor = '#ef4444',
+  warningColor = '#f59e0b',
   infoColor = '#3b82f6',
   textColor = '#ffffff',
   bgColor = '#141419',
@@ -203,7 +215,7 @@ const NotificationContainer = ({
         const duration = Math.max(1000, data.duration || 3000)
         
         // Validate type
-        const validTypes = ['success', 'error', 'info']
+        const validTypes = ['success', 'error', 'warning', 'info']
         const notificationType = validTypes.includes(type) ? type : 'info'
         
         // Show notification
@@ -239,6 +251,7 @@ const NotificationContainer = ({
           onClose={() => notificationManager.remove(notification.id)}
           successColor={successColor}
           errorColor={errorColor}
+          warningColor={warningColor}
           infoColor={infoColor}
           textColor={textColor}
           bgColor={bgColor}

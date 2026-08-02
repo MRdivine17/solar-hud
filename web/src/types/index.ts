@@ -1,3 +1,86 @@
+// Mirror of the payload built by BuildHudConfigPayload() in client/main.lua.
+// This is server-owned config (config.lua) and always wins over user settings.
+export interface HudConfig {
+  hud: {
+    enabled: boolean
+    hideInVehicle: boolean
+    hideInPauseMenu: boolean
+  }
+  statusBars: {
+    health: boolean
+    armor: boolean
+    hunger: boolean
+    thirst: boolean
+    oxygen: boolean
+    stress: boolean
+  }
+  components: {
+    voiceOrRadio: boolean
+    serverId: boolean
+    time: boolean
+    job: boolean
+    gang: boolean
+    bankBalance: boolean
+    cashBalance: boolean
+    dirtyMoneyBalance: boolean
+    weapon: boolean
+    serverLogo: boolean
+  }
+  vehicleHud: {
+    enabled: boolean
+    showSpeed: boolean
+    showFuel: boolean
+    showRPM: boolean
+    showGear: boolean
+    showDamage: boolean
+    showOdometer: boolean
+    showDoorWarning: boolean
+    showSeatbeltWarning: boolean
+    showEngineWarning: boolean
+  }
+  minimap: {
+    enabled: boolean
+    shape: 'square' | 'rounded' | 'circular'
+    showOnFoot: boolean
+    showCompassOnFoot: boolean
+    showStreetName: boolean
+    showZoneName: boolean
+    moveCompassWhenHidden: boolean
+    size: number
+  }
+  voice: {
+    showWaveAnimation: boolean
+    showRadioChannel: boolean
+  }
+  format: {
+    currency: string
+    numberFormat: string
+    speedUnit: 'kmh' | 'mph'
+    distanceUnit: 'meters' | 'feet'
+    locale: string
+    timeFormat: '12h' | '24h'
+  }
+  permissions: {
+    editSettings: boolean
+    editLayout: boolean
+    editLogo: boolean
+  }
+  seatbelt: { enabled: boolean }
+  stress: { enabled: boolean }
+}
+
+// Per-element toggles handed to the vehicle HUD components
+export interface VehicleHudVisibility {
+  showSpeed: boolean
+  showFuel: boolean
+  showRPM: boolean
+  showGear: boolean
+  showDamage: boolean
+  showDoorWarning: boolean
+  showSeatbeltWarning: boolean
+  showEngineWarning: boolean
+}
+
 export interface HUDData {
   health: number
   armor: number
@@ -262,6 +345,8 @@ export interface LocationData {
   street: string
   zone: string
   direction?: string
+  visible?: boolean        // Config.Minimap.showCompassOnFoot (false = hidden on foot)
+  minimapVisible?: boolean // used with Config.Minimap.moveCompassWhenHidden
 }
 
 export interface PlayerInfo {

@@ -1,6 +1,7 @@
 import './VehicleHUD2.css'
 import '@mdi/font/css/materialdesignicons.min.css'
 import { useState, useEffect } from 'react'
+import { VehicleHudVisibility } from '../types'
 
 interface VehicleHUD2Props {
   speed: number
@@ -15,6 +16,19 @@ interface VehicleHUD2Props {
   doors: boolean
   engine: boolean
   speedUnit?: 'kmh' | 'mph'
+  /** Per-element toggles from Config.VehicleHUD */
+  show?: Partial<VehicleHudVisibility>
+}
+
+const DEFAULT_SHOW: VehicleHudVisibility = {
+  showSpeed: true,
+  showFuel: true,
+  showRPM: true,
+  showGear: true,
+  showDamage: true,
+  showDoorWarning: true,
+  showSeatbeltWarning: true,
+  showEngineWarning: true
 }
 
 const VehicleHUD2 = ({
@@ -25,8 +39,10 @@ const VehicleHUD2 = ({
   lights,
   highbeams = false,
   doors,
-  speedUnit = 'kmh'
+  speedUnit = 'kmh',
+  show
 }: VehicleHUD2Props) => {
+  const vis: VehicleHudVisibility = { ...DEFAULT_SHOW, ...(show || {}) }
   const [currentGear, setCurrentGear] = useState(0)
   const [currentRPM, setCurrentRPM] = useState(800)
   const [blink, setBlink] = useState(false)
@@ -151,39 +167,48 @@ const VehicleHUD2 = ({
   return (
     <div className="vehicle-hud2">
       <svg className="hud2-svg" viewBox="0 0 280 280">
-        {/* OUTER LEFT - Fuel bar (half arc on left side, above speed bar) */}
-        <path
-          d={createLeftHalfArc(100, 130)}
-          fill="none"
-          stroke="rgba(90, 159, 212, 0.2)"
-          strokeWidth="5"
-          strokeLinecap="butt"
-        />
-        <path
-          d={createLeftHalfArc(fuelPercentage, 130)}
-          fill="none"
-          stroke="#5a9fd4"
-          strokeWidth="5"
-          strokeLinecap="butt"
-        />
+        {/* OUTER LEFT - Fuel bar (Config.VehicleHUD.showFuel) */}
+        {vis.showFuel && (
+          <>
+            <path
+              d={createLeftHalfArc(100, 130)}
+              fill="none"
+              stroke="rgba(90, 159, 212, 0.2)"
+              strokeWidth="5"
+              strokeLinecap="butt"
+            />
+            <path
+              d={createLeftHalfArc(fuelPercentage, 130)}
+              fill="none"
+              stroke="#5a9fd4"
+              strokeWidth="5"
+              strokeLinecap="butt"
+            />
+          </>
+        )}
         
-        {/* OUTER RIGHT - Engine Health bar (half arc on right side, above speed bar) */}
-        <path
-          d={createRightHalfArc(100, 130)}
-          fill="none"
-          stroke="rgba(90, 159, 212, 0.2)"
-          strokeWidth="5"
-          strokeLinecap="butt"
-        />
-        <path
-          d={createRightHalfArc(enginePercentage, 130)}
-          fill="none"
-          stroke="#5a9fd4"
-          strokeWidth="5"
-          strokeLinecap="butt"
-        />
+        {/* OUTER RIGHT - Engine Health bar (Config.VehicleHUD.showDamage) */}
+        {vis.showDamage && (
+          <>
+            <path
+              d={createRightHalfArc(100, 130)}
+              fill="none"
+              stroke="rgba(90, 159, 212, 0.2)"
+              strokeWidth="5"
+              strokeLinecap="butt"
+            />
+            <path
+              d={createRightHalfArc(enginePercentage, 130)}
+              fill="none"
+              stroke="#5a9fd4"
+              strokeWidth="5"
+              strokeLinecap="butt"
+            />
+          </>
+        )}
         
-        {/* Background arc for speed - WHITE with square ends */}
+        {/* Speed background arc (Config.VehicleHUD.showSpeed) */}
+        {vis.showSpeed && (
         <path
           d={createArc(100, 119)}
           fill="none"
@@ -191,8 +216,10 @@ const VehicleHUD2 = ({
           strokeWidth="10"
           strokeLinecap="butt"
         />
+        )}
         
-        {/* Speed progress arc - WHITE with square ends */}
+        {/* Speed progress arc (Config.VehicleHUD.showSpeed) */}
+        {vis.showSpeed && (
         <path
           d={createArc(speedPercentage, 119)}
           fill="none"
@@ -200,8 +227,10 @@ const VehicleHUD2 = ({
           strokeWidth="10"
           strokeLinecap="butt"
         />
+        )}
         
-        {/* Background arc for RPM - BLUE with square ends */}
+        {/* RPM background arc (Config.VehicleHUD.showRPM) */}
+        {vis.showRPM && (
         <path
           d={createArc(100, 109)}
           fill="none"
@@ -209,8 +238,10 @@ const VehicleHUD2 = ({
           strokeWidth="5"
           strokeLinecap="butt"
         />
+        )}
         
-        {/* RPM progress arc - BLUE with square ends */}
+        {/* RPM progress arc (Config.VehicleHUD.showRPM) */}
+        {vis.showRPM && (
         <path
           d={createArc(rpmPercentage, 109)}
           fill="none"
@@ -218,9 +249,10 @@ const VehicleHUD2 = ({
           strokeWidth="5"
           strokeLinecap="butt"
         />
+        )}
         
-        {/* Gear numbers ABOVE the speed */}
-        {[1, 2, 3, 4, 5, 6].map((gear) => {
+        {/* Gear numbers ABOVE the speed (Config.VehicleHUD.showGear) */}
+        {vis.showGear && [1, 2, 3, 4, 5, 6].map((gear) => {
           const pos = getGearNumberPosition(gear)
           const isActive = currentGear === gear
           
@@ -244,43 +276,57 @@ const VehicleHUD2 = ({
       
       {/* Center Content */}
       <div className="hud2-center">
-        {/* Large Speed */}
-        <div className="hud2-speed">{Math.round(speed)}</div>
-        <div className="hud2-unit-below">{speedUnit.toUpperCase()}</div>
+        {/* Large Speed (Config.VehicleHUD.showSpeed) */}
+        {vis.showSpeed && (
+          <>
+            <div className="hud2-speed">{Math.round(speed)}</div>
+            <div className="hud2-unit-below">{speedUnit.toUpperCase()}</div>
+          </>
+        )}
         
         {/* Bottom Icons */}
         <div className="hud2-icons">
-          {/* Seatbelt Icon - Blinks violently when NOT wearing seatbelt */}
-          <div className={`hud2-icon seatbelt-icon ${!seatbelt ? 'active blink-violent' : 'worn'}`}>
-            <i className="mdi mdi-seatbelt"></i>
-          </div>
+          {/* Seatbelt Icon (Config.VehicleHUD.showSeatbeltWarning) */}
+          {vis.showSeatbeltWarning && (
+            <div className={`hud2-icon seatbelt-icon ${!seatbelt ? 'active blink-violent' : 'worn'}`}>
+              <i className="mdi mdi-seatbelt"></i>
+            </div>
+          )}
           
           {/* Lights Icon - Always visible: Off (dim), Low beam (light white), High beam (bright white) */}
           <div className={`hud2-icon lights-icon ${highbeams ? 'highbeam' : lights ? 'lowbeam' : 'off'}`}>
             <i className="mdi mdi-car-light-high"></i>
           </div>
           
-          {/* Door Icon - Blinks bright when door is open */}
-          <div className={`hud2-icon door-icon ${doors ? 'active blink-bright' : ''}`}>
-            <i className="mdi mdi-car-door"></i>
-          </div>
+          {/* Door Icon (Config.VehicleHUD.showDoorWarning) */}
+          {vis.showDoorWarning && (
+            <div className={`hud2-icon door-icon ${doors ? 'active blink-bright' : ''}`}>
+              <i className="mdi mdi-car-door"></i>
+            </div>
+          )}
           
-          {/* Engine Health Icon - Blinks violently when health below 40% */}
-          <div className={`hud2-icon engine-icon ${engineHealth < 40 ? 'active blink-violent' : ''}`}>
-            <i className="mdi mdi-engine"></i>
-          </div>
+          {/* Engine Icon (Config.VehicleHUD.showEngineWarning) */}
+          {vis.showEngineWarning && (
+            <div className={`hud2-icon engine-icon ${engineHealth < 40 ? 'active blink-violent' : ''}`}>
+              <i className="mdi mdi-engine"></i>
+            </div>
+          )}
         </div>
       </div>
       
-      {/* Fuel Icon - Below left bar start, blinks when fuel below 20% */}
-      <div className={`hud2-fuel-icon ${fuel < 20 ? 'blink-fast' : ''}`}>
-        <i className="mdi mdi-gas-station"></i>
-      </div>
+      {/* Fuel Icon (Config.VehicleHUD.showFuel) */}
+      {vis.showFuel && (
+        <div className={`hud2-fuel-icon ${fuel < 20 ? 'blink-fast' : ''}`}>
+          <i className="mdi mdi-gas-station"></i>
+        </div>
+      )}
       
-      {/* Engine Health Icon - Below right bar start, blinks when low */}
-      <div className={`hud2-engine-icon ${engineHealth < 30 && blink ? 'blink-fast' : ''}`}>
-        <i className="mdi mdi-wrench"></i>
-      </div>
+      {/* Engine damage Icon (Config.VehicleHUD.showDamage) */}
+      {vis.showDamage && (
+        <div className={`hud2-engine-icon ${engineHealth < 30 && blink ? 'blink-fast' : ''}`}>
+          <i className="mdi mdi-wrench"></i>
+        </div>
+      )}
     </div>
   )
 }

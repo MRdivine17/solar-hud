@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { HUDSettings, NotificationSettings, ProgressBarSettings } from '../types'
 import './NotificationProgressSettings.css'
+import Dropdown from './Dropdown'
 
 interface NotificationProgressSettingsProps {
   isOpen: boolean
@@ -106,19 +107,20 @@ const NotificationProgressSettings = ({ isOpen, settings, onSave, onClose }: Not
               
               <div className="setting-group">
                 <label>Position</label>
-                <select 
+                <Dropdown
                   value={notificationSettings.position}
-                  onChange={(e) => updateNotificationSetting('position', e.target.value)}
-                >
-                  <option value="top-left">Top Left</option>
-                  <option value="top-center">Top Center</option>
-                  <option value="top-right">Top Right</option>
-                  <option value="center-left">Center Left</option>
-                  <option value="center-right">Center Right</option>
-                  <option value="bottom-left">Bottom Left</option>
-                  <option value="bottom-center">Bottom Center</option>
-                  <option value="bottom-right">Bottom Right</option>
-                </select>
+                  options={[
+                    { value: 'top-left', label: 'Top Left' },
+                    { value: 'top-center', label: 'Top Center' },
+                    { value: 'top-right', label: 'Top Right' },
+                    { value: 'center-left', label: 'Center Left' },
+                    { value: 'center-right', label: 'Center Right' },
+                    { value: 'bottom-left', label: 'Bottom Left' },
+                    { value: 'bottom-center', label: 'Bottom Center' },
+                    { value: 'bottom-right', label: 'Bottom Right' }
+                  ]}
+                  onChange={(v) => updateNotificationSetting('position', v)}
+                />
               </div>
 
               <div className="setting-group">
@@ -190,15 +192,16 @@ const NotificationProgressSettings = ({ isOpen, settings, onSave, onClose }: Not
               
               <div className="setting-group">
                 <label>Position</label>
-                <select 
+                <Dropdown
                   value={progressBarSettings.position}
-                  onChange={(e) => updateProgressBarSetting('position', e.target.value)}
-                >
-                  <option value="top-center">Top Center</option>
-                  <option value="bottom-left">Bottom Left</option>
-                  <option value="bottom-center">Bottom Center</option>
-                  <option value="bottom-right">Bottom Right</option>
-                </select>
+                  options={[
+                    { value: 'top-center', label: 'Top Center' },
+                    { value: 'bottom-left', label: 'Bottom Left' },
+                    { value: 'bottom-center', label: 'Bottom Center' },
+                    { value: 'bottom-right', label: 'Bottom Right' }
+                  ]}
+                  onChange={(v) => updateProgressBarSetting('position', v)}
+                />
               </div>
 
               <div className="setting-group">

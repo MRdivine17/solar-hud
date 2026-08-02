@@ -18,16 +18,17 @@ Config.FuelSystem = "native" -- Supported: "native" (default GTA V fuel), "ox_fu
 -- LOCALE & FORMATTING
 -- ============================================
 
-Config.Locale = "en"
-Config.Currency = "$"
-Config.NumberFormat = "en-US" -- follows [language]-[country code]
+Config.Locale = "en" -- RESERVED: no translation files ship with the script yet
+Config.Currency = "$" -- Money prefix used by every money card in the UI
+Config.NumberFormat = "en-US" -- follows [language]-[country code], drives thousand separators
 
 -- ============================================
 -- MEASUREMENTS
 -- ============================================
 
-Config.SpeedMeasurement = "kmh" -- "kmh" or "mph" (can be changed in HUD settings)
-Config.DistanceMeasurement = "meters" -- "meters" or "feet"
+Config.SpeedMeasurement = "kmh" -- "kmh" or "mph" - default unit; the player can override it in /hudedit
+Config.DistanceMeasurement = "meters" -- "meters" or "feet" - boat depth / wave height readouts
+-- NOTE: aircraft altitude always stays in feet (aviation standard, stall warnings depend on it)
 
 -- ============================================
 -- COMMANDS (Registered in client/main.lua)
@@ -73,25 +74,30 @@ Config.IndicatorHazardsKeybind = "UP"
 -- ============================================
 
 Config.HUD = {
-    enabled = true, -- Line 968: RegisterCommand('hud') toggles visibility
-    refreshRate = 100, -- ms - Health/Status update rate (line 179: Wait(100))
-    hideInPauseMenu = true,
-    hideInVehicle = false,
+    enabled = true, -- false = HUD starts hidden (players can still bring it back with /hud)
+    refreshRate = 100, -- ms - health/armour/hunger/thirst/stress tick rate (minimum 50)
+    hideInPauseMenu = true, -- Hide HUD + minimap while the ESC menu is open
+    hideInVehicle = false, -- true = hide the whole HUD (and minimap) while in a vehicle
     useRealTime = false, -- true = real time, false = in-game time
     timeFormat = '24h' -- '24h' or '12h'
 }
 
 -- ============================================
--- STATUS BARS (Updated every 250ms - Line 179)
+-- STATUS BARS (tick rate = Config.HUD.refreshRate)
 -- ============================================
+-- `enabled = false` hides the bar for everyone and cannot be re-enabled by the
+-- player in /hudedit. Colours/icons are player-side settings (/hudedit) - the
+-- values below are only used as a reference for your own default-settings.json.
 
 Config.StatusBars = {
     health = { enabled = true, color = '#ef4444', icon = 'bi-heart-fill' },
     armor = { enabled = true, color = '#3b82f6', icon = 'bi-shield-fill' },
     hunger = { enabled = true, color = '#f59e0b', icon = 'bi-egg-fried' },
     thirst = { enabled = true, color = '#06b6d4', icon = 'bi-droplet-fill' },
+    -- showOnlyUnderwater = true  -> bar appears while diving only
+    -- showOnlyUnderwater = false -> bar doubles as a sprint-stamina bar on land
     oxygen = { enabled = true, color = '#00bcd4', icon = 'bi-wind', showOnlyUnderwater = true },
-    stress = { enabled = true, color = '#9c27b0', icon = 'bi-brain' } -- Works with ESX, QBCore, QBox
+    stress = { enabled = true, color = '#9c27b0', icon = 'bi-brain' } -- also needs Config.Stress.enabled
 }
 
 -- ============================================
@@ -150,70 +156,72 @@ Config.Stress = {
 }
 
 -- ============================================
--- VEHICLE HUD (Updated every 50ms - Line 358-660)
+-- VEHICLE HUD (data pushed every 100ms while in a vehicle)
 -- ============================================
+-- Every toggle below hides that element in ALL four car HUD styles.
 
 Config.VehicleHUD = {
-    enabled = true, -- Line 358: Vehicle HUD thread
-    showSpeed = true, -- Line 365-367: speedKmh, speedMph
-    showFuel = true, -- Line 369-407: Fuel level (supports multiple fuel systems)
-    showRPM = true, -- Line 374-375: RPM
-    speedUnit = 'kmh', -- 'kmh' or 'mph' - Can be changed in HUD settings
-    showOdometer = true, -- Line 428: odometer
-    showGear = true, -- Line 377-378: gear
-    showDamage = true, -- Line 380-382: engineHealth
-    showDoorWarning = true, -- Line 427: doorOpen
-    showSeatbeltWarning = true, -- Line 594-617: Seatbelt alarm
-    showEngineWarning = true -- Line 426: engineOn
+    enabled = true, -- false = no in-vehicle HUD at all (car / boat / plane / heli)
+    showSpeed = true, -- Speedometer number + arc/needle
+    showFuel = true, -- Fuel gauge (source = Config.FuelSystem)
+    showRPM = true, -- RPM bar / arc
+    speedUnit = 'kmh', -- DEPRECATED: use Config.SpeedMeasurement (kept for backwards compat)
+    showOdometer = true, -- Odometer readout
+    showGear = true, -- Gear indicator
+    showDamage = true, -- Engine health gauge + wrench icon
+    showDoorWarning = true, -- Open-door warning icon
+    showSeatbeltWarning = true, -- Seatbelt warning icon (also needs Config.Seatbelt.enabled)
+    showEngineWarning = true -- Engine status icon
 }
 
 -- ============================================
--- MINIMAP SETTINGS (Line 1192-1223)
+-- MINIMAP SETTINGS
 -- ============================================
 
 Config.Minimap = {
-    enabled = true,
-    shape = 'square', -- 'square' or 'rounded' (line 1192: minimapstyle command)
-    showOnFoot = true, -- Show minimap when on foot
-    showCompassOnFoot = true, -- Show compass when on foot
-    showStreetName = true, -- Line 662-663: Location thread
-    showZoneName = true, -- Line 664: zoneName
-    showNorthBlip = true, -- Show north indicator on minimap
-    moveCompassWhenHidden = true, -- Move compass down when minimap is hidden
-    size = 180 -- Size in pixels (smaller = 180, default = 200)
+    enabled = true, -- false = radar never shown, /minimapstyle and /toggleminimap refuse
+    shape = 'square', -- 'square', 'rounded' or 'circular' (default style, /minimapstyle can change it)
+    showOnFoot = false, -- false = radar only visible while in a vehicle
+    showCompassOnFoot = true, -- false = compass card hidden while on foot
+    showStreetName = true, -- Street line on the compass card
+    showZoneName = true, -- Zone line on the compass card
+    showNorthBlip = true, -- North indicator on the minimap
+    moveCompassWhenHidden = true, -- Slide the compass down when the radar is hidden
+    size = 180 -- Minimap size in pixels (200 = GTA default, smaller = 180)
 }
 
--- Nearest Postal (NOT IMPLEMENTED)
+-- Nearest Postal (NOT IMPLEMENTED - no postal dataset ships with the script)
 Config.ShowNearestPostal = false
 -- Config.NearestPostalsData = "data/nearest-postal/postals.json"
 
 -- ============================================
--- VOICE SETTINGS (Line 1461-1608)
+-- VOICE SETTINGS
 -- ============================================
 
 Config.Voice = {
-    system = 'pma-voice', -- Line 1461: GetResourceState('pma-voice')
-    pushToTalkKey = 'N', -- Default push-to-talk key
-    showWaveAnimation = true, -- Show wave animation when speaking
-    showRadioChannel = true -- Line 1467-1608: Radio channel tracking
+    system = 'pma-voice', -- 'pma-voice', 'mumble-voip', 'saltychat' or anything else = native detection
+    pushToTalkKey = 'N', -- INFORMATIONAL ONLY: the voice resource owns this bind, the HUD never registers it
+    showWaveAnimation = true, -- Animated bars while talking
+    showRadioChannel = true -- false = never display the radio frequency
 }
 
 -- ============================================
 -- COMPONENT DISPLAY SETTINGS
 -- ============================================
+-- false = hidden for everyone; players cannot re-enable it in /hudedit.
 
 Config.ShowComponents = {
-    pedAvatar = false, -- Player avatar (unstable, not implemented)
-    voiceOrRadio = true, -- Voice indicator (line 1461-1608)
-    serverId = true, -- Server ID (line 119-135: updatePlayerInfo)
-    time = true, -- Server time (line 662-688: Location thread with time)
-    job = true, -- Job display (line 119-135: updatePlayerInfo)
-    gang = false, -- Gang display (QBCore only - not implemented for ESX)
-    bankBalance = true, -- Bank balance (line 137-165: updateMoney)
-    cashBalance = true, -- Cash balance (line 137-165: updateMoney)
-    dirtyMoneyBalance = false, -- Dirty money/black money (line 137-165: updateMoney)
-    weapon = true, -- Weapon display (handled in React UI)
-    serverLogo = true -- Server logo (line 48-60: setLogoConfig)
+    pedAvatar = false, -- NOT IMPLEMENTED (no avatar renderer)
+    voiceOrRadio = true, -- Voice / radio card (also stops the voice thread when false)
+    serverId = true, -- Server ID card
+    time = true, -- Time card (also stops the clock thread when false)
+    job = true, -- Job card
+    gang = false, -- NOT IMPLEMENTED (QBCore gang data is not read)
+    bankBalance = true, -- Bank money card
+    cashBalance = true, -- Cash money card
+    dirtyMoneyBalance = false, -- Dirty / black money card
+    weapon = true, -- Weapon + ammo display (also stops the weapon thread when false)
+    serverLogo = true -- Server logo image
 }
 
 -- ============================================
@@ -240,9 +248,9 @@ Config.ServerLogo = {
 -- USER PERMISSIONS
 -- ============================================
 
-Config.AllowPlayersToEditSettings = true -- Allow players to edit HUD settings (line 1261: hudsettings command)
-Config.AllowUsersToEditLayout = true -- Allow players to drag/resize HUD elements (positioning mode)
-Config.AllowServerLogoEditing = true -- Allow players to move/scale server logo
+Config.AllowPlayersToEditSettings = true -- false = /hudedit and /hudsettings are not registered
+Config.AllowUsersToEditLayout = true -- false = /playerinfoedit, /piedit, /hudposition, /hudpos are not registered
+Config.AllowServerLogoEditing = true -- false = the logo cannot be dragged/resized in positioning mode
 
 -- ============================================
 -- DEFAULT SETTINGS & RESET

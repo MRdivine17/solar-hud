@@ -8,10 +8,35 @@ import './SimplePositioningMode.css'
 // Helper to get resource name for NUI callbacks
 const GetParentResourceName = () => {
   if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-    return 'hud' // Development fallback
+    return 'solar-hud' // Development fallback
   }
-  const match = window.location.hostname.match(/^([^.]+)\./)
-  return match ? match[1] : 'hud'
+  return (window as any).GetParentResourceName ? (window as any).GetParentResourceName() : 'solar-hud'
+}
+
+// Same contract as PositioningMode: send 0.0-1.0 viewport fractions so the
+// client never has to guess which resolution the pixels were measured in.
+const postMinimapPosition = (pos: { x: number; y: number; width?: number; height?: number }) => {
+  const W = window.innerWidth
+  const H = window.innerHeight
+  const width = pos.width || 270
+  const height = pos.height || 200
+
+  return fetch(`https://${GetParentResourceName()}/updateMinimapPosition`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      x: pos.x,
+      y: pos.y,
+      width,
+      height,
+      screenWidth: W,
+      screenHeight: H,
+      fracX: pos.x / W,
+      fracY: pos.y / H,
+      fracW: width / W,
+      fracH: height / H
+    })
+  }).catch(() => {})
 }
 
 interface SimplePositioningModeProps {
@@ -21,6 +46,8 @@ interface SimplePositioningModeProps {
   playerInfo: PlayerInfoType
   money: MoneyData
   weapon: WeaponData
+  /** Rect the minimap is actually rendered at, in 0-1 screen fractions */
+  minimapAnchor?: { x: number; y: number; width: number; height: number } | null
   onSave: (settings: HUDSettings) => void
   onClose: () => void
 }
@@ -32,6 +59,7 @@ const SimplePositioningMode = ({
   playerInfo,
   money,
   weapon,
+  minimapAnchor,
   onSave,
   onClose
 }: SimplePositioningModeProps) => {
@@ -64,10 +92,27 @@ const SimplePositioningMode = ({
   const [snapToGrid, setSnapToGrid] = useState(true)
 
   useEffect(() => {
-    if (isActive) {
-      setPositions(settings.uiPositions || defaultPositions)
+    if (!isActive) return
+
+    const base = settings.uiPositions || defaultPositions
+
+    // The client tells us where the minimap really is on screen - snap the
+    // card onto it instead of using a hardcoded guess.
+    if (minimapAnchor) {
+      setPositions({
+        ...base,
+        minimap: {
+          x: Math.round(minimapAnchor.x * window.innerWidth),
+          y: Math.round(minimapAnchor.y * window.innerHeight),
+          width: Math.round(minimapAnchor.width * window.innerWidth),
+          height: Math.round(minimapAnchor.height * window.innerHeight)
+        }
+      })
+      return
     }
-  }, [isActive])
+
+    setPositions(base)
+  }, [isActive, minimapAnchor])
 
   const [draggingKey, setDraggingKey] = useState<string | null>(null)
   const dragInfoRef = useRef<{ offsetX: number; offsetY: number } | null>(null)
@@ -99,18 +144,9 @@ const SimplePositioningMode = ({
     const handleMouseUp = () => {
       // Send minimap position to Lua if minimap was dragged
       if (draggingKey === 'minimap' && positions.minimap) {
-        fetch(`https://${GetParentResourceName()}/updateMinimapPosition`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            x: positions.minimap.x,
-            y: positions.minimap.y,
-            width: positions.minimap.width || 270,
-            height: positions.minimap.height || 200
-          })
-        }).catch(() => {}) // Ignore errors in development
+        postMinimapPosition(positions.minimap)
       }
-      
+
       // Save to real HUD when mouse is released
       onSave({ ...settings, uiPositions: positions })
       setDraggingKey(null)
@@ -129,18 +165,9 @@ const SimplePositioningMode = ({
   const handleSave = () => {
     // Send minimap position to Lua client
     if (positions.minimap) {
-      fetch(`https://${GetParentResourceName()}/updateMinimapPosition`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          x: positions.minimap.x,
-          y: positions.minimap.y,
-          width: positions.minimap.width || 270,
-          height: positions.minimap.height || 200
-        })
-      })
+      postMinimapPosition(positions.minimap)
     }
-    
+
     // Save all positions to settings
     onSave({ ...settings, uiPositions: positions })
     onClose()
@@ -186,15 +213,15 @@ const SimplePositioningMode = ({
           top: `${pos.y}px`,
           pointerEvents: 'all',
           cursor: 'move',
-          border: '2px dashed rgba(251, 146, 60, 0.8)',
-          background: 'rgba(10, 10, 10, 0.9)',
+          border: '1px dashed rgba(245, 165, 36, 0.5)',
+          background: '#0b0d11',
           borderRadius: '8px',
           padding: '12px 16px',
           display: 'flex',
           alignItems: 'center',
           gap: '12px',
           minWidth: '200px',
-          boxShadow: isDragging ? '0 8px 24px rgba(251, 146, 60, 0.4)' : '0 4px 12px rgba(0,0,0,0.5)',
+          boxShadow: isDragging ? '0 16px 40px -16px rgba(0,0,0,0.9)' : '0 4px 12px rgba(0,0,0,0.5)',
           transform: isDragging ? 'scale(1.05)' : 'scale(1)',
           transition: isDragging ? 'none' : 'transform 0.2s, box-shadow 0.2s',
           zIndex: isDragging ? 10000 : 9000
@@ -206,10 +233,10 @@ const SimplePositioningMode = ({
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
-          background: 'rgba(251, 146, 60, 0.2)',
+          background: 'rgba(245, 165, 36, 0.12)',
           borderRadius: '8px'
         }}>
-          <FontAwesomeIcon icon={icon} style={{ color: '#fb923c', fontSize: '20px' }} />
+          <FontAwesomeIcon icon={icon} style={{ color: '#f5a524', fontSize: '20px' }} />
         </div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: '10px', color: '#999', marginBottom: '2px' }}>{label}</div>
@@ -233,8 +260,8 @@ const SimplePositioningMode = ({
           top: `${pos.y}px`,
           pointerEvents: 'all',
           cursor: 'move',
-          border: '2px dashed rgba(251, 146, 60, 0.8)',
-          background: 'rgba(10, 10, 10, 0.9)',
+          border: '1px dashed rgba(245, 165, 36, 0.5)',
+          background: '#0b0d11',
           borderRadius: '12px',
           padding: '8px',
           display: 'flex',
@@ -242,7 +269,7 @@ const SimplePositioningMode = ({
           alignItems: 'center',
           gap: '6px',
           minWidth: '70px',
-          boxShadow: isDragging ? '0 8px 24px rgba(251, 146, 60, 0.4)' : '0 4px 12px rgba(0,0,0,0.5)',
+          boxShadow: isDragging ? '0 16px 40px -16px rgba(0,0,0,0.9)' : '0 4px 12px rgba(0,0,0,0.5)',
           transform: isDragging ? 'scale(1.05)' : 'scale(1)',
           transition: isDragging ? 'none' : 'transform 0.2s, box-shadow 0.2s',
           zIndex: isDragging ? 10000 : 9000
@@ -285,28 +312,9 @@ const SimplePositioningMode = ({
           <input type="checkbox" checked={snapToGrid} onChange={(e) => setSnapToGrid(e.target.checked)} />
           <span>Snap to Grid ({GRID_SIZE}px)</span>
         </label>
-        <div style={{ 
-          background: 'rgba(59, 130, 246, 0.15)', 
-          border: '1px solid rgba(59, 130, 246, 0.4)',
-          borderRadius: '8px',
-          padding: '12px',
-          marginTop: '16px',
-          textAlign: 'center'
-        }}>
-          <div style={{ 
-            fontSize: '14px', 
-            color: '#60a5fa', 
-            fontWeight: '600',
-            marginBottom: '4px'
-          }}>
-            Press ESC to save and exit
-          </div>
-          <div style={{ 
-            fontSize: '11px', 
-            color: 'rgba(255, 255, 255, 0.6)'
-          }}>
-            All changes are saved automatically
-          </div>
+        <div className="edit-mode-hint">
+          <strong>Press ESC to save &amp; exit</strong>
+          <span>All changes are saved automatically</span>
         </div>
       </div>
 
@@ -322,10 +330,10 @@ const SimplePositioningMode = ({
             height: `${positions.minimap?.height || 200}px`,
             pointerEvents: 'all',
             cursor: 'move',
-            border: '3px dashed rgba(59, 130, 246, 0.9)',
-            background: 'rgba(59, 130, 246, 0.25)',
+            border: '1px dashed rgba(245, 165, 36, 0.6)',
+            background: 'rgba(245, 165, 36, 0.07)',
             borderRadius: '12px',
-            boxShadow: draggingKey === 'minimap' ? '0 8px 32px rgba(59, 130, 246, 0.6)' : '0 4px 16px rgba(59, 130, 246, 0.4)',
+            boxShadow: draggingKey === 'minimap' ? '0 18px 44px -16px rgba(0,0,0,0.9)' : '0 10px 30px -18px rgba(0,0,0,0.9)',
             transform: draggingKey === 'minimap' ? 'scale(1.03)' : 'scale(1)',
             transition: draggingKey === 'minimap' ? 'none' : 'transform 0.2s, box-shadow 0.2s',
             zIndex: draggingKey === 'minimap' ? 10001 : 9999,
@@ -395,11 +403,11 @@ const SimplePositioningMode = ({
                 top: `${pos.y}px`,
                 pointerEvents: 'all',
                 cursor: 'move',
-                border: '2px dashed rgba(251, 146, 60, 0.8)',
+                border: '1px dashed rgba(245, 165, 36, 0.5)',
                 padding: '4px',
-                background: 'rgba(251, 146, 60, 0.1)',
+                background: 'rgba(245, 165, 36, 0.06)',
                 borderRadius: '8px',
-                boxShadow: isDragging ? '0 8px 24px rgba(251, 146, 60, 0.4)' : '0 4px 12px rgba(0,0,0,0.5)',
+                boxShadow: isDragging ? '0 16px 40px -16px rgba(0,0,0,0.9)' : '0 4px 12px rgba(0,0,0,0.5)',
                 transform: isDragging ? 'scale(1.05)' : 'scale(1)',
                 transition: isDragging ? 'none' : 'transform 0.2s, box-shadow 0.2s',
                 zIndex: isDragging ? 10000 : 9000

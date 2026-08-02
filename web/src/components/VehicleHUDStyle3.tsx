@@ -1,5 +1,6 @@
 import './VehicleHUDStyle3.css'
 import '@mdi/font/css/materialdesignicons.min.css'
+import { VehicleHudVisibility } from '../types'
 
 interface VehicleHUDStyle3Props {
   speed: number
@@ -14,6 +15,19 @@ interface VehicleHUDStyle3Props {
   leftSignal?: boolean
   rightSignal?: boolean
   speedUnit?: 'kmh' | 'mph'
+  /** Per-element toggles from Config.VehicleHUD */
+  show?: Partial<VehicleHudVisibility>
+}
+
+const DEFAULT_SHOW: VehicleHudVisibility = {
+  showSpeed: true,
+  showFuel: true,
+  showRPM: true,
+  showGear: true,
+  showDamage: true,
+  showDoorWarning: true,
+  showSeatbeltWarning: true,
+  showEngineWarning: true
 }
 
 const VehicleHUDStyle3 = ({
@@ -25,8 +39,10 @@ const VehicleHUDStyle3 = ({
   lights,
   leftSignal = false,
   rightSignal = false,
-  speedUnit = 'kmh'
+  speedUnit = 'kmh',
+  show
 }: VehicleHUDStyle3Props) => {
+  const vis: VehicleHudVisibility = { ...DEFAULT_SHOW, ...(show || {}) }
   // RPM calculation - rpm comes as 0-100 from client
   // The yellow bar fills from left to right based on RPM percentage
   const rpmPercentage = Math.min(rpm, 100)
@@ -39,7 +55,8 @@ const VehicleHUDStyle3 = ({
 
   return (
     <div className="style3-container">
-      {/* Fuel Gauge */}
+      {/* Fuel Gauge - Config.VehicleHUD.showFuel */}
+      {vis.showFuel && (
       <div className="style3-fuel">
         <svg width="38" height="107" viewBox="0 0 38 107" fill="none" xmlns="http://www.w3.org/2000/svg">
           <mask id="mask0_fuel_s3" style={{ maskType: 'alpha' }} maskUnits="userSpaceOnUse" x="0" y="17" width="30" height="90">
@@ -79,15 +96,19 @@ const VehicleHUDStyle3 = ({
           </defs>
         </svg>
       </div>
+      )}
 
       {/* Speedometer Section */}
       <div className="style3-middle">
-        <span className="style3-speed">
-          {speed.toString().length === 1 ? '00' : speed.toString().length === 2 ? '0' : ''}
-          <span className="style3-speed-value">{Math.round(speed)}</span>
-          <span className="style3-speed-unit"> {speedUnit === 'mph' ? 'MPH' : 'KM/H'}</span>
-        </span>
+        {vis.showSpeed && (
+          <span className="style3-speed">
+            {speed.toString().length === 1 ? '00' : speed.toString().length === 2 ? '0' : ''}
+            <span className="style3-speed-value">{Math.round(speed)}</span>
+            <span className="style3-speed-unit"> {speedUnit === 'mph' ? 'MPH' : 'KM/H'}</span>
+          </span>
+        )}
 
+        {vis.showRPM && (
         <div className="style3-rpm-wrapper">
           <svg width="300" height="29" viewBox="0 0 300 29" fill="none" xmlns="http://www.w3.org/2000/svg">
             <path d="M0.574219 28.0312H217.482" stroke="white" strokeWidth="1.80757" />
@@ -120,6 +141,7 @@ const VehicleHUDStyle3 = ({
             <div className="style3-rpm-indicator" style={{ left: rpmPercentage + '%' }} />
           </div>
         </div>
+        )}
 
         {/* Warning Icons */}
         <div className="style3-icons">
@@ -129,22 +151,29 @@ const VehicleHUDStyle3 = ({
           <i 
             className={`mdi mdi-arrow-right-bold ${rightSignal ? 'icon-active blink' : 'icon-inactive'}`}
           />
-          <i 
-            className={`mdi mdi-seatbelt ${!seatbelt ? 'icon-warning blink' : 'icon-inactive'}`}
-          />
-          <i 
-            className={`mdi mdi-wrench ${engineHealth < 50 ? 'icon-warning blink' : 'icon-inactive'}`}
-          />
-          <i 
+          {vis.showSeatbeltWarning && (
+            <i
+              className={`mdi mdi-seatbelt ${!seatbelt ? 'icon-warning blink' : 'icon-inactive'}`}
+            />
+          )}
+          {vis.showDamage && (
+            <i
+              className={`mdi mdi-wrench ${engineHealth < 50 ? 'icon-warning blink' : 'icon-inactive'}`}
+            />
+          )}
+          <i
             className={`mdi mdi-car-light-high ${lights ? 'icon-active' : 'icon-inactive'}`}
           />
-          <i 
-            className="mdi mdi-engine icon-inactive"
-          />
+          {vis.showEngineWarning && (
+            <i
+              className="mdi mdi-engine icon-inactive"
+            />
+          )}
         </div>
       </div>
 
-      {/* Engine Health Gauge */}
+      {/* Engine Health Gauge - Config.VehicleHUD.showDamage */}
+      {vis.showDamage && (
       <div className="style3-engine">
         <svg width="38" height="107" viewBox="0 0 38 107" fill="none" xmlns="http://www.w3.org/2000/svg">
           <mask id="mask0_engine_s3" style={{ maskType: 'alpha' }} maskUnits="userSpaceOnUse" x="8" y="17" width="30" height="90">
@@ -183,6 +212,7 @@ const VehicleHUDStyle3 = ({
           </defs>
         </svg>
       </div>
+      )}
     </div>
   )
 }

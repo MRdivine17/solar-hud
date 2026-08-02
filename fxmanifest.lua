@@ -26,6 +26,7 @@ files {
     'web/build/index.html',
     'web/build/**/*',
     'web/img/**/*', -- Logo files go here (e.g., web/img/logo.png)
+    'fonts/**/*',   -- Drop-in custom UI font (see fonts/README.md)
     'stream/minimap.gfx'
 }
 

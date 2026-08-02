@@ -1,6 +1,7 @@
 import './VehicleHUDStyle4.css'
 import hudImage from './carhud/Style4/sytle4.png'
 import '@mdi/font/css/materialdesignicons.min.css'
+import { VehicleHudVisibility } from '../types'
 
 interface VehicleHUDStyle4Props {
   speed: number
@@ -15,6 +16,19 @@ interface VehicleHUDStyle4Props {
   leftSignal?: boolean
   rightSignal?: boolean
   speedUnit?: 'kmh' | 'mph'
+  /** Per-element toggles from Config.VehicleHUD */
+  show?: Partial<VehicleHudVisibility>
+}
+
+const DEFAULT_SHOW: VehicleHudVisibility = {
+  showSpeed: true,
+  showFuel: true,
+  showRPM: true,
+  showGear: true,
+  showDamage: true,
+  showDoorWarning: true,
+  showSeatbeltWarning: true,
+  showEngineWarning: true
 }
 
 const VehicleHUDStyle4 = ({
@@ -24,8 +38,10 @@ const VehicleHUDStyle4 = ({
   engineHealth,
   seatbelt,
   doors,
-  speedUnit = 'kmh'
+  speedUnit = 'kmh',
+  show
 }: VehicleHUDStyle4Props) => {
+  const vis: VehicleHudVisibility = { ...DEFAULT_SHOW, ...(show || {}) }
   // ============================================
   // SPEED UNIT SYSTEM - KMH or MPH
   // ============================================
@@ -116,7 +132,8 @@ const VehicleHUDStyle4 = ({
         className="style4-base-image"
       />
       
-      {/* Left Side - Speedometer */}
+      {/* Left Side - Speedometer (Config.VehicleHUD.showSpeed) */}
+      {vis.showSpeed && (
       <div className="style4-left-gauge">
         {/* Speed Numbers along curved border */}
         {speedScale.map((item) => {
@@ -174,8 +191,10 @@ const VehicleHUDStyle4 = ({
           <div className="style4-needle-center" />
         </div>
       </div>
-      
-      {/* Right Side - Gear Indicator */}
+      )}
+
+      {/* Right Side - Gear Indicator (Config.VehicleHUD.showGear) */}
+      {vis.showGear && (
       <div className="style4-right-gauge">
         {/* Gear Numbers */}
         {gearScale.map((item) => {
@@ -209,28 +228,35 @@ const VehicleHUDStyle4 = ({
           <div className="style4-gear-needle-center" />
         </div>
       </div>
-      
+      )}
+
       {/* Center - Minimal Icons */}
       <div className="style4-center-indicators">
-        {/* Fuel - Icon + Percentage */}
-        <div className="style4-minimal-row">
-          <i className="mdi mdi-gas-station" style={{ color: fuel < 20 ? '#e24242c4' : '#ffffffff' }}></i>
-          <span style={{ color: fuel < 20 ? '#e43535b7' : '#ffffff' }}>{Math.floor(fuel)}%</span>
-        </div>
+        {/* Fuel (Config.VehicleHUD.showFuel) */}
+        {vis.showFuel && (
+          <div className="style4-minimal-row">
+            <i className="mdi mdi-gas-station" style={{ color: fuel < 20 ? '#e24242c4' : '#ffffffff' }}></i>
+            <span style={{ color: fuel < 20 ? '#e43535b7' : '#ffffff' }}>{Math.floor(fuel)}%</span>
+          </div>
+        )}
         
-        {/* Engine - Icon + Percentage */}
-        <div className="style4-minimal-row">
-          <i className="mdi mdi-wrench" style={{ color: engineHealth < 30 ? '#ee28287c' : '#ffffffff' }}></i>
-          <span style={{ color: engineHealth < 30 ? '#ec3030a9' : '#ffffff' }}>{Math.floor(engineHealth)}%</span>
-        </div>
+        {/* Engine damage (Config.VehicleHUD.showDamage) */}
+        {vis.showDamage && (
+          <div className="style4-minimal-row">
+            <i className="mdi mdi-wrench" style={{ color: engineHealth < 30 ? '#ee28287c' : '#ffffffff' }}></i>
+            <span style={{ color: engineHealth < 30 ? '#ec3030a9' : '#ffffff' }}>{Math.floor(engineHealth)}%</span>
+          </div>
+        )}
         
-        {/* Seatbelt - Always Visible */}
-        <div className={`style4-minimal-row ${!seatbelt ? 'style4-seatbelt-blink' : ''}`}>
-          <i className="mdi mdi-seatbelt" style={{ color: seatbelt ? '#ede8eeff' : '#ffffff' }}></i>
-        </div>
+        {/* Seatbelt (Config.VehicleHUD.showSeatbeltWarning) */}
+        {vis.showSeatbeltWarning && (
+          <div className={`style4-minimal-row ${!seatbelt ? 'style4-seatbelt-blink' : ''}`}>
+            <i className="mdi mdi-seatbelt" style={{ color: seatbelt ? '#ede8eeff' : '#ffffff' }}></i>
+          </div>
+        )}
         
-        {/* Door - Icon Only */}
-        {doors && (
+        {/* Door (Config.VehicleHUD.showDoorWarning) */}
+        {vis.showDoorWarning && doors && (
           <div className="style4-minimal-row style4-warning-blink">
             <i className="mdi mdi-car-door" style={{ color: '#f8f8f8ff' }}></i>
           </div>

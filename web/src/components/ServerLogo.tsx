@@ -129,10 +129,16 @@ const ServerLogo = ({ positioningMode, hudSettings }: ServerLogoProps) => {
       const finalX = rect.left
       const finalY = rect.top
       
+      // Merge onto the LATEST saved settings, never onto the prop: the prop can
+      // carry config.lua overrides (bars/cards force-hidden server-side) which
+      // must never be written into the player's own saved settings.
+      const rawSaved = localStorage.getItem('hudSettings')
+      const baseSettings = rawSaved ? JSON.parse(rawSaved) : hudSettings
+
       const updatedSettings = {
-        ...hudSettings,
+        ...baseSettings,
         uiPositions: {
-          ...(hudSettings.uiPositions || {}),
+          ...(baseSettings.uiPositions || {}),
           serverLogo: {
             x: finalX,
             y: finalY,
@@ -216,9 +222,13 @@ const ServerLogo = ({ positioningMode, hudSettings }: ServerLogoProps) => {
     
     // Save to localStorage and Lua ONLY on drag end (not during movement)
     if (hudSettings) {
+      // Same rule as above: start from what is actually saved
+      const rawSaved = localStorage.getItem('hudSettings')
+      const baseSettings = rawSaved ? JSON.parse(rawSaved) : hudSettings
+
       const finalSettings = {
-        ...hudSettings,
-        serverLogoScale: hudSettings.serverLogoScale || config.scale
+        ...baseSettings,
+        serverLogoScale: baseSettings.serverLogoScale || hudSettings.serverLogoScale || config.scale
       }
       
       // Save to localStorage
@@ -248,9 +258,9 @@ const ServerLogo = ({ positioningMode, hudSettings }: ServerLogoProps) => {
         transform: `scale(${savedScale / 100})`,
         transformOrigin: 'top center',
         cursor: positioningMode ? 'move' : 'default',
-        outline: positioningMode ? '3px solid rgba(59, 130, 246, 0.8)' : 'none',
+        outline: positioningMode ? '1px dashed rgba(245, 165, 36, 0.65)' : 'none',
         outlineOffset: '3px',
-        boxShadow: positioningMode ? '0 0 20px rgba(59, 130, 246, 0.5)' : 'none',
+        boxShadow: positioningMode ? '0 0 0 1px rgba(0,0,0,0.5), 0 0 26px -6px rgba(245, 165, 36, 0.45)' : 'none',
         pointerEvents: positioningMode ? 'auto' : 'none',
         touchAction: 'none',
         zIndex: positioningMode ? 10000 : 'auto',
@@ -282,7 +292,7 @@ const ServerLogo = ({ positioningMode, hudSettings }: ServerLogoProps) => {
             right: '-6px',
             width: '20px',
             height: '20px',
-            background: 'rgba(59, 130, 246, 0.9)',
+            background: '#f5a524',
             border: '2px solid white',
             borderRadius: '50%',
             cursor: 'nwse-resize',

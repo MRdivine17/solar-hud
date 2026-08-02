@@ -35,8 +35,13 @@ const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, on
     return { x: 0, y: Math.round(H * 0.82), width: Math.round(W * 0.15), height: Math.round(H * 0.19) }
   }
 
+  // The client sends the rect the minimap is ACTUALLY rendered at right now
+  // (custom position included), so it is authoritative - always prefer it.
+  // Trusting localStorage here is what made the card sit away from the map.
   const getInitialMinimap = () => {
-    // If user has a saved drag position, use it; otherwise use the anchor-derived default
+    if (minimapAnchor) {
+      return computeDefaultPixels()
+    }
     if (currentPositions?.minimap?.width && currentPositions.minimap.width > 0) {
       return currentPositions.minimap
     }
@@ -61,12 +66,10 @@ const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, on
     }
   }, [isActive])
 
-  // When anchor arrives from Lua, update the minimap default position
-  // (only if user hasn't already dragged/saved a custom position)
+  // When the rect arrives from Lua, snap the card onto it. This always wins:
+  // it describes where the map is on screen at this moment.
   useEffect(() => {
     if (!minimapAnchor) return
-    const hasSaved = currentPositions?.minimap?.width && currentPositions.minimap.width > 0
-    if (hasSaved) return
     const W = window.innerWidth
     const H = window.innerHeight
     const anchored = {
@@ -87,6 +90,7 @@ const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, on
   const [draggingElement, setDraggingElement] = useState<string | null>(null)
   const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 })
   const [resizingElement, setResizingElement] = useState<string | null>(null)
+  const [resizeStart, setResizeStart] = useState<{ mouseX: number; mouseY: number; width: number; height: number } | null>(null)
 
   const GRID_SIZE = 10
   const SAFEZONE_MARGIN = 40
@@ -124,7 +128,46 @@ const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, on
     e.stopPropagation()
   }
 
+  const handleResizeMouseDown = (e: React.MouseEvent, elementId: string) => {
+    const pos = positions[elementId as keyof UIPositions]
+    const element = hudElements.find(el => el.id === elementId)
+    if (!pos) return
+
+    setResizingElement(elementId)
+    setResizeStart({
+      mouseX: e.clientX,
+      mouseY: e.clientY,
+      width: pos.width || element?.minWidth || defaults.width,
+      height: pos.height || element?.minHeight || defaults.height
+    })
+
+    e.stopPropagation()
+    e.preventDefault()
+  }
+
   const handleMouseMove = (e: MouseEvent) => {
+    // ---- resize ----
+    if (resizingElement && resizeStart) {
+      const currentPos = positions[resizingElement as keyof UIPositions]
+      if (!currentPos) return
+
+      const rawW = resizeStart.width + (e.clientX - resizeStart.mouseX)
+      const rawH = resizeStart.height + (e.clientY - resizeStart.mouseY)
+
+      // Clamp to 0.25x - 3x of the stock minimap size (matches the client clamp)
+      const newWidth = snap(Math.max(defaults.width * 0.25, Math.min(defaults.width * 3, rawW)))
+      const newHeight = snap(Math.max(defaults.height * 0.25, Math.min(defaults.height * 3, rawH)))
+
+      const updated = {
+        ...positions,
+        [resizingElement]: { ...currentPos, width: newWidth, height: newHeight }
+      }
+      positionsRef.current = updated
+      setPositions(updated)
+      return
+    }
+
+    // ---- drag ----
     if (!draggingElement) return
 
     const currentPos = positions[draggingElement as keyof UIPositions]
@@ -158,11 +201,13 @@ const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, on
 
   const handleMouseUp = () => {
     // Use ref so we always read the latest position (state is stale in closures)
-    if (draggingElement === 'minimap' && positionsRef.current.minimap) {
+    const touchedMinimap = draggingElement === 'minimap' || resizingElement === 'minimap'
+    if (touchedMinimap && positionsRef.current.minimap) {
       sendMinimapPosition(positionsRef.current.minimap)
     }
     setDraggingElement(null)
     setResizingElement(null)
+    setResizeStart(null)
   }
 
   // Helper to get resource name for NUI callbacks
@@ -173,15 +218,33 @@ const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, on
     return (window as any).GetParentResourceName ? (window as any).GetParentResourceName() : 'solar-hud'
   }
 
-  // Send minimap position to client immediately
+  // Send minimap position to client immediately.
+  // Values go over as 0.0-1.0 fractions of the NUI viewport: the game converts
+  // them with its own resolution, so a NUI/game resolution mismatch can no
+  // longer scale the offset. Pixels are still sent for older client builds.
   const sendMinimapPosition = (pos: { x: number; y: number; width?: number; height?: number }) => {
     const d = computeDefaultPixels()
+    const W = window.innerWidth
+    const H = window.innerHeight
+    const width = pos.width || d.width
+    const height = pos.height || d.height
+
     const payload = {
+      // legacy pixel fields
       x: pos.x,
       y: pos.y,
-      width:  pos.width  || d.width,
-      height: pos.height || d.height
+      width,
+      height,
+      // viewport the pixels were measured against
+      screenWidth: W,
+      screenHeight: H,
+      // preferred, resolution-independent
+      fracX: pos.x / W,
+      fracY: pos.y / H,
+      fracW: width / W,
+      fracH: height / H
     }
+
     console.log('[HUD UI] Sending minimap position to client:', payload)
     fetch(`https://${getParentResourceName()}/updateMinimapPosition`, {
       method: 'POST',
@@ -202,7 +265,7 @@ const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, on
         window.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [draggingElement, resizingElement, dragOffset])
+  }, [draggingElement, resizingElement, dragOffset, resizeStart, positions])
 
   // ESC key handler - close positioning mode
   useEffect(() => {
@@ -342,28 +405,9 @@ const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, on
         </div>
 
         <div className="edit-mode-finish">
-          <div style={{ 
-            background: 'rgba(59, 130, 246, 0.2)', 
-            border: '2px solid rgba(59, 130, 246, 0.5)',
-            borderRadius: '8px',
-            padding: '16px',
-            textAlign: 'center',
-            width: '100%'
-          }}>
-            <div style={{ 
-              fontSize: '16px', 
-              color: '#60a5fa', 
-              fontWeight: 'bold',
-              marginBottom: '6px'
-            }}>
-              Press ESC to save and exit
-            </div>
-            <div style={{ 
-              fontSize: '12px', 
-              color: 'rgba(255, 255, 255, 0.7)'
-            }}>
-              All changes are saved automatically
-            </div>
+          <div className="edit-mode-hint">
+            <strong>Press ESC to save &amp; exit</strong>
+            <span>All changes are saved automatically</span>
           </div>
         </div>
       </div>
@@ -390,50 +434,29 @@ const PositioningMode = ({ isActive, minimapAnchor, currentPositions, onSave, on
               top: pos.y,
               width: pos.width,
               height: pos.height,
-              opacity: 1,
               pointerEvents: 'all',
               cursor: isDragging ? 'grabbing' : 'grab',
-              border: '3px dashed rgba(59, 130, 246, 0.9)',
-              background: 'rgba(59, 130, 246, 0.25)',
-              borderRadius: '12px',
-              boxShadow: isDragging ? '0 8px 32px rgba(59, 130, 246, 0.6)' : '0 4px 16px rgba(59, 130, 246, 0.4)',
-              transform: isDragging ? 'scale(1.03)' : 'scale(1)',
-              transition: isDragging ? 'none' : 'transform 0.2s, box-shadow 0.2s',
               zIndex: isDragging ? 1000 : 10,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               flexDirection: 'column',
-              gap: '10px'
+              gap: '8px'
             }}
             onMouseDown={(e) => handleMouseDown(e, element.id)}
           >
-            <div style={{
-              fontSize: '48px',
-              lineHeight: '1',
-              textShadow: '0 2px 8px rgba(0,0,0,0.9)'
-            }}>
-              🗺️
+            <div className="pm-target-glyph">🗺</div>
+            <div className="pm-target-label">{element.label}</div>
+            <div className="pm-target-hint">Drag to move &bull; corner handle to resize</div>
+            <div className="element-size pm-target-size">
+              {Math.round(pos.width || 0)} &times; {Math.round(pos.height || 0)}
             </div>
-            <div style={{
-              fontSize: '16px',
-              color: '#fff',
-              fontWeight: 'bold',
-              textShadow: '0 2px 6px rgba(0,0,0,0.9)',
-              textAlign: 'center',
-              letterSpacing: '1px'
-            }}>
-              {element.label}
-            </div>
-            <div style={{
-              fontSize: '11px',
-              color: '#e0e0e0',
-              textAlign: 'center',
-              padding: '0 16px',
-              textShadow: '0 1px 4px rgba(0,0,0,0.8)'
-            }}>
-              Drag to reposition in-game minimap
-            </div>
+
+            {/* Resize handle - bottom right */}
+            <div
+              className="positioning-resize-handle"
+              onMouseDown={(e) => handleResizeMouseDown(e, element.id)}
+            />
           </div>
         )
       })}

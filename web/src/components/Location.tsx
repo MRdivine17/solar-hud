@@ -2,15 +2,23 @@ import { memo, useRef, useState } from 'react'
 import * as React from 'react'
 import 'bootstrap-icons/font/bootstrap-icons.css'
 import { HUDSettings, MinimapSettings } from '../types'
+import { readPosition, writePosition } from '../utils/layout'
+import { useViewport } from '../hooks/useViewport'
 
 interface LocationProps {
   data: {
     street: string
     zone: string
     direction?: string
+    visible?: boolean
+    minimapVisible?: boolean
   }
   settings?: HUDSettings
   positioningMode?: boolean
+  /** Config.Minimap.moveCompassWhenHidden */
+  moveCompassWhenHidden?: boolean
+  /** Config.Minimap.size - how far to shift the compass when the radar is hidden */
+  minimapHeight?: number
 }
 
 // Helper function
@@ -22,16 +30,16 @@ const GetParentResourceName = () => {
 }
 
 // Draggable Location Wrapper
-const DraggableLocationWrapper = memo(({ 
-  children, 
-  positioningMode, 
+const DraggableLocationWrapper = memo(({
+  children,
+  positioningMode,
   hudSettings,
-  defaultPosition
+  yOffset = 0
 }: {
   children: React.ReactNode
   positioningMode?: boolean
   hudSettings?: HUDSettings
-  defaultPosition: { x: number; y: number }
+  yOffset?: number
 }) => {
   const containerRef = useRef<HTMLDivElement>(null)
   const [isDragging, setIsDragging] = useState(false)
@@ -39,9 +47,11 @@ const DraggableLocationWrapper = memo(({
 
   // Get position key
   const positionKey = 'location'
-  
-  // Get position from settings or use default
-  const savedPosition = hudSettings?.uiPositions?.[positionKey] || defaultPosition
+
+  // Resolve the stored design-space record against the live viewport.
+  // Re-renders automatically when the game resolution changes.
+  const vp = useViewport()
+  const savedPosition = readPosition(hudSettings?.uiPositions, positionKey, vp)
   
   const handlePointerDown: React.PointerEventHandler<HTMLDivElement> = (e) => {
     if (!positioningMode || !hudSettings) return
@@ -87,20 +97,18 @@ const DraggableLocationWrapper = memo(({
     
     // Save position immediately
     if (containerRef.current && hudSettings) {
-      const rect = containerRef.current.getBoundingClientRect()
-      const finalX = rect.left
-      const finalY = rect.top
-      
+      // Merge onto the LATEST saved settings, never onto the prop: the prop can
+      // carry config.lua overrides (bars/cards force-hidden server-side) which
+      // must never be written into the player's own saved settings.
+      const rawSaved = localStorage.getItem('hudSettings')
+      const baseSettings = rawSaved ? JSON.parse(rawSaved) : hudSettings
+
       const updatedSettings = {
-        ...hudSettings,
+        ...baseSettings,
         uiPositions: {
-          ...(hudSettings.uiPositions || {}),
-          [positionKey]: {
-            x: finalX,
-            y: finalY,
-            width: 270,
-            height: 60
-          }
+          ...(baseSettings.uiPositions || {}),
+          // stored resolution-independently (design space + anchor)
+          [positionKey]: writePosition(containerRef.current, vp, positionKey)
         }
       }
       
@@ -119,7 +127,6 @@ const DraggableLocationWrapper = memo(({
         body: JSON.stringify(updatedSettings)
       }).catch(() => {})
       
-      console.log(`[${positionKey}] Position saved to localStorage:`, { x: finalX, y: finalY })
     }
     
     dragStartRef.current = null
@@ -130,12 +137,12 @@ const DraggableLocationWrapper = memo(({
       ref={containerRef}
       style={{
         position: 'absolute',
-        left: `${savedPosition.x}px`,
-        top: `${savedPosition.y}px`,
+        left: `${savedPosition.left}px`,
+        top: `${savedPosition.top + yOffset}px`,
         cursor: positioningMode ? 'move' : 'default',
-        outline: positioningMode ? '3px solid rgba(59, 130, 246, 0.8)' : 'none',
+        outline: positioningMode ? '1px dashed rgba(245, 165, 36, 0.65)' : 'none',
         outlineOffset: '3px',
-        boxShadow: positioningMode ? '0 0 20px rgba(59, 130, 246, 0.5)' : 'none',
+        boxShadow: positioningMode ? '0 0 0 1px rgba(0,0,0,0.5), 0 0 26px -6px rgba(245, 165, 36, 0.45)' : 'none',
         pointerEvents: positioningMode ? 'auto' : 'none',
         touchAction: 'none',
         zIndex: positioningMode ? 10000 : 'auto',
@@ -150,11 +157,21 @@ const DraggableLocationWrapper = memo(({
   )
 })
 
-const Location = memo(({ data, settings, positioningMode }: LocationProps) => {
+const Location = memo(({ data, settings, positioningMode, moveCompassWhenHidden = true, minimapHeight = 180 }: LocationProps) => {
+  // Config.Minimap.showCompassOnFoot = false -> the client sends visible:false while on foot
+  if (data.visible === false && !positioningMode) return null
+
   if (!data.street && !data.zone && !positioningMode) return null
 
   const compassSettings: Partial<MinimapSettings> = settings?.minimap || {}
-  
+
+  // Config.Minimap.moveCompassWhenHidden: slide the compass down into the
+  // space the radar would have occupied when the radar is hidden
+  const compassOffset =
+    moveCompassWhenHidden && data.minimapVisible === false && !positioningMode
+      ? Math.round(minimapHeight * 0.9)
+      : 0
+
   // Get border radius style
   const getBorderRadiusStyle = () => {
     const radius = compassSettings.compassBorderRadius || 'rounded'
@@ -170,20 +187,24 @@ const Location = memo(({ data, settings, positioningMode }: LocationProps) => {
     boxShadow: `0 0 8px ${compassSettings.compassShadowColor || '#000000'}80`
   }
 
-  // Get default position from App.tsx defaultSettings (above minimap)
-  const defaultPosition = { x: 20, y: 560 }
-
   return (
     <DraggableLocationWrapper
       positioningMode={positioningMode}
       hudSettings={settings}
-      defaultPosition={defaultPosition}
+      yOffset={compassOffset}
     >
       <div className="location" style={compassStyle}>
-        <div className="location-icon">{data.direction || 'N'}</div>
+        {compassSettings.showCompassDirection !== false && (
+          <div className="location-icon">{data.direction || 'N'}</div>
+        )}
         <div className="location-info">
-          <div className="location-street">{data.street || 'Street Name'}</div>
-          <div className="location-zone">{data.zone || 'Zone Name'}</div>
+          {/* Empty street/zone means Config.Minimap.showStreetName / showZoneName is off */}
+          {(data.street || positioningMode) && (
+            <div className="location-street">{data.street || 'Street Name'}</div>
+          )}
+          {(data.zone || positioningMode) && (
+            <div className="location-zone">{data.zone || 'Zone Name'}</div>
+          )}
         </div>
       </div>
     </DraggableLocationWrapper>
